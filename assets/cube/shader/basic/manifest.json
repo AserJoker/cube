@@ -1,0 +1,7 @@
+{
+    "name": "cube.shader.basic",
+    "shaders": {
+        "vertex": "vertex.glsl",
+        "fragment": "fragment.glsl"
+    }
+}
