@@ -10,7 +10,6 @@
 #include "runtime/Locale.hpp"
 #include <clocale>
 #include <filesystem>
-#include <print>
 #include <string>
 
 #ifdef __WIN32__
@@ -22,25 +21,21 @@ using namespace cube;
 class Underground : public core::Subscriber {
 private:
   runtime::IWindow *_window{};
-  runtime::AssetManager *_assetManager{};
-  runtime::ConfigManager *_configManager{};
+  runtime::AssetManager *_asset{};
+  runtime::ConfigManager *_config{};
   runtime::Locale *_locale{};
   render::IRenderer *_renderer{};
 
 public:
   void onInitialize(runtime::EventInitialize &) {
     auto assetsPath = std::filesystem::current_path().append("assets").string();
-    _assetManager->initStore(assetsPath);
+    _asset->initStore(assetsPath);
     auto configPath = std::filesystem::current_path().append("config").string();
-    _configManager->loadConfig(configPath);
+    _config->loadConfig(configPath);
     auto application = runtime::Application::getInstance();
     _window = application->createOpenGLWindow(4, 2);
     _renderer = _window->getRenderer();
     _renderer->setClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    _locale->setLanguage("en_US");
-    std::println("{}", _locale->i18n("language.name"));
-    _locale->setLanguage("zh_CN");
-    std::println("{}", _locale->i18n("language.name"));
   }
 
   void onUpdate(runtime::EventUpdate &) {
@@ -51,8 +46,8 @@ public:
   void onUninitialize(runtime::EventUninitialize &) {}
 
   Underground() {
-    _assetManager = core::Singleton<runtime::AssetManager>::get();
-    _configManager = core::Singleton<runtime::ConfigManager>::get();
+    _asset = core::Singleton<runtime::AssetManager>::get();
+    _config = core::Singleton<runtime::ConfigManager>::get();
     _locale = core::Singleton<runtime::Locale>::get();
     _eventBus->on(this, &Underground::onInitialize);
     _eventBus->on(this, &Underground::onUpdate);

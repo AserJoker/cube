@@ -1,6 +1,7 @@
 {
-    "cmake.configureArgs": [
-        "-DCMAKE_TOOLCHAIN_FILE=${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "-DVCPKG_TARGET_TRIPLET=x64-mingw-dynamic"
-    ],
+    "cmake.configureArgs": [],
+    "cmake.debugConfig": {
+        "cwd": "${workspaceFolder}",
+        "MIMode": "gdb"
+    },
 }

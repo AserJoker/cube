@@ -20,6 +20,42 @@ AssetManager::AssetManager() {
 
 void AssetManager::resolveNode(const std::vector<std::string> &ns,
                                const std::filesystem::path &path) {
+  if (!is_directory(path)) {
+    std::string type;
+    auto filename = path.filename().string();
+    if (path.has_extension()) {
+      type = path.extension().string();
+      filename = filename.substr(0, filename.size() -
+                                        path.extension().string().size());
+      type = type.substr(1);
+      std::transform(type.begin(), type.end(), type.begin(), tolower);
+    } else {
+      type = "unknown";
+    }
+    std::string name = filename;
+    std::string group = type;
+    if (_typeGroups.contains(type)) {
+      group = _typeGroups.at(type);
+    };
+
+    AssetNamespace *nsNode = nullptr;
+    for (size_t idx = 0; idx < ns.size() - 1; idx++) {
+      auto &n = ns[idx];
+      if (!nsNode) {
+        nsNode = &_stores[group].namespaces[n];
+      } else {
+        nsNode = &nsNode->children[n];
+      }
+    }
+    auto &node = nsNode->nodes[name];
+    node.path = path.string();
+    node.type = type;
+    if (node.asset) {
+      delete node.asset;
+      node.asset = nullptr;
+    }
+    return;
+  }
   for (auto &item : directory_iterator(path)) {
     if (is_directory(item)) {
       std::vector<std::string> currentNs = ns;

@@ -1,5 +1,22 @@
 cmake_minimum_required(VERSION 3.12)
 
+if(MSVC)
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/execution_charset:utf-8>")
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/source_charset:utf-8>")
+endif()
+
+if(WIN32)
+    if(MSVC)
+        set(VCPKG_TARGET_TRIPLET x64-windows)
+    else()
+        set(VCPKG_TARGET_TRIPLET x64-mingw-dynamic)
+    endif()
+else()
+    set(VCPKG_TARGET_TRIPLET x64-linux)
+endif()
+
+set(CMAKE_TOOLCHAIN_FILE $ENV{VCPKG_ROOT}\\scripts\\buildsystems\\vcpkg.cmake)
+
 project(cube)
 set(CMAKE_CXX_STANDARD 23)
 

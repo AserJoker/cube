@@ -24,49 +24,45 @@ std::vector<std::string> Locale::getLanguages() {
 void Locale::setLanguage(const std::string &lang) {
   _language = lang;
   _locales.clear();
-  auto langAssets =
-      _asset->filter([=](const AssetManager::Asset &asset) -> bool {
-        return asset.name == lang && asset.type == "lang";
-      });
-  if (langAssets.empty()) {
-    return setLanguage("en_US");
+  auto buf = _asset->query(std::format("lang:cube.i18n.{}", lang))
+                 ->cast<core::Buffer>();
+  if (!buf) {
+    if (lang == "en_US") {
+      return;
+    }
+    setLanguage("en_US");
   }
-  for (auto &asset : langAssets) {
-    auto buf =
-        _asset->query(std::format("{}:{}.{}", asset.type, asset.ns, asset.name))
-            ->cast<core::Buffer>();
-    std::stringstream ss((const char *)buf->getData());
-    std::string line;
-    while (std::getline(ss, line)) {
-      size_t comment_pos = line.find('#');
-      if (comment_pos != std::string::npos) {
-        line = line.substr(0, comment_pos);
+  std::stringstream ss((const char *)buf->getData());
+  std::string line;
+  while (std::getline(ss, line)) {
+    size_t comment_pos = line.find('#');
+    if (comment_pos != std::string::npos) {
+      line = line.substr(0, comment_pos);
+    }
+    for (auto &ch : line) {
+      if (ch == '\t') {
+        ch = ' ';
       }
-      for (auto &ch : line) {
-        if (ch == '\t') {
-          ch = ' ';
-        }
+    }
+    line.erase(0, line.find_first_not_of(" "));
+    line.erase(line.find_last_not_of(" ") + 1);
+    if (line.empty()) {
+      continue;
+    }
+    size_t equal_pos = line.find('=');
+    if (equal_pos != std::string::npos) {
+      std::string key = line.substr(0, equal_pos);
+      std::string value = line.substr(equal_pos + 1);
+      while (key.back() == ' ') {
+        key.pop_back();
       }
-      line.erase(0, line.find_first_not_of(" "));
-      line.erase(line.find_last_not_of(" ") + 1);
-      if (line.empty()) {
-        continue;
+      while (value.front() == ' ') {
+        value.erase(value.begin());
       }
-      size_t equal_pos = line.find('=');
-      if (equal_pos != std::string::npos) {
-        std::string key = line.substr(0, equal_pos);
-        std::string value = line.substr(equal_pos + 1);
-        while (key.back() == ' ') {
-          key.pop_back();
-        }
-        while (value.front() == ' ') {
-          value.erase(value.begin());
-        }
-        if (value.front() == '\"') {
-          value = value.substr(1, value.length() - 2);
-        }
-        _locales[key] = value;
+      if (value.front() == '\"') {
+        value = value.substr(1, value.length() - 2);
       }
+      _locales[key] = value;
     }
   }
 }
