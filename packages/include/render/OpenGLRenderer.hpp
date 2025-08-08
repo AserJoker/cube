@@ -9,7 +9,7 @@ private:
   std::unordered_map<std::string, OpenGLShader *> _shaders;
 
 public:
-  void setClearColor(const glm::vec4 &color) override;
+  void setClearColor(float r, float g, float b, float a) override;
   void clear() override;
   void draw(IMesh *mesh) override;
   IMesh *createMesh() override;

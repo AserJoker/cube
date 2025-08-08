@@ -27,8 +27,14 @@ public:
     return ins;
   }
   template <class T> T *create(auto &&...args) {
-    T *object = new T(std::forward<decltype(args)>(args)...);
+    T *object = createObject<T>(std::forward<decltype(args)>(args)...);
     object->setParent(this);
+    return object;
+  }
+
+public:
+  template <class T> static T *createObject(auto &&...args) {
+    T *object = new T(std::forward<decltype(args)>(args)...);
     return object;
   }
 };

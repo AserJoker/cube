@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 project(underground)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CUBE_OUTPUT_PATH})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CUBE_OUTPUT_PATH})
 add_executable(${PROJECT_NAME} src/main.cpp)
 target_include_directories(${PROJECT_NAME} PRIVATE include)
 target_link_libraries(${PROJECT_NAME} PRIVATE cube)

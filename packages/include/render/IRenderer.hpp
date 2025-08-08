@@ -5,10 +5,11 @@
 #include <glm/glm.hpp>
 #include <string>
 #include <unordered_map>
+
 namespace cube::render {
 class IRenderer : public core::Object {
 public:
-  virtual void setClearColor(const glm::vec4 &color) = 0;
+  virtual void setClearColor(float r, float g, float b, float a) = 0;
   virtual void clear() = 0;
   virtual void draw(IMesh *mesh) = 0;
   virtual IMesh *createMesh() = 0;

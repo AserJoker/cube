@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
 namespace cube::core {
 class EventBus : public Object {
 private:

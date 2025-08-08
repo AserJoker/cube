@@ -73,9 +73,11 @@ public:
   Variable *setArray(const ArrayProxy &proxy);
   Variable *setDict(const DictProxy &proxy);
   Variable *getIndex(size_t idx);
+  Variable *setIndex(size_t idx, Variable *item);
   size_t getSize();
   void setSize(size_t size);
   Variable *getField(const std::string &name);
+  Variable *setField(const std::string &name, Variable *item);
   bool delField(const std::string &name);
   std::vector<std::string> getKeys();
   Variable *setObject(Type *type, core::Object *self);

@@ -13,14 +13,18 @@
 #include <cstdint>
 #include <stdexcept>
 #include <unordered_map>
+
 namespace cube::reflection {
+
 template <class T> struct Accessor {
   Variable::Getter<T> getter;
   Variable::Setter<T> setter;
 };
+
 Variable::Variable() : _kind(Kind::VALUE), _type(nullptr) {
   _type = core::Singleton<NullType>::get();
 }
+
 Type *Variable::getType() { return _type; }
 
 Variable *Variable::setNull() {
@@ -278,8 +282,37 @@ Variable *Variable::getIndex(size_t idx) {
     }
     if (!array[idx]) {
       array[idx] = create<Variable>();
-      return array[idx];
     }
+    return array[idx];
+  }
+  return nullptr;
+}
+Variable *Variable::setIndex(size_t idx, Variable *item) {
+  if (_type->getKind() == Type::Kind::ARRAY) {
+    if (_kind == Kind::ACCESSOR) {
+      auto &proxy = std::any_cast<ArrayProxy &>(_value);
+      if (idx >= proxy.getSize()) {
+        if (proxy.setSize) {
+          proxy.setSize(idx + 1);
+        } else {
+          throw std::runtime_error("Failed to set index, setSize is undefined");
+        }
+      }
+      if (!proxy.setIndex) {
+        throw std::runtime_error("Failed to set index, setIndex is undefined");
+      }
+      return proxy.setIndex(idx, item);
+    }
+    auto &array = std::any_cast<std::vector<Variable *> &>(_value);
+    if (idx >= array.size()) {
+      array.resize(idx + 1, nullptr);
+    }
+    if (array[idx]) {
+      delete array[idx];
+      array[idx] = item;
+      item->setParent(this);
+    }
+    return this;
   }
   return nullptr;
 }
@@ -327,6 +360,26 @@ Variable *Variable::getField(const std::string &name) {
       dict[name] = create<Variable>();
     }
     return dict[name];
+  }
+  return nullptr;
+}
+Variable *Variable::setField(const std::string &name, Variable *item) {
+  if (_type->getKind() == Type::Kind::DICT) {
+    if (_kind == Kind::ACCESSOR) {
+      auto &proxy = std::any_cast<DictProxy &>(_value);
+      if (!proxy.setField) {
+        throw std::runtime_error("Failed to set field, setField is undefined");
+      }
+      return proxy.setField(name, item);
+    }
+    auto &dict =
+        std::any_cast<std::unordered_map<std::string, Variable *> &>(_value);
+    if (dict.contains(name)) {
+      delete dict[name];
+    }
+    dict[name] = item;
+    item->setParent(this);
+    return this;
   }
   return nullptr;
 }

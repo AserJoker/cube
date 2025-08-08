@@ -263,6 +263,9 @@ AssetManager::getNamespace(const std::string &type, const std::string &nsName) {
 core::Object *AssetManager::query(const std::string &name) {
   auto node = get(name);
   if (node) {
+    if (!node->asset) {
+      load(name);
+    }
     std::shared_lock<std::shared_mutex> lock(node->mutex);
     return node->asset;
   }
@@ -274,6 +277,9 @@ core::Object *AssetManager::query(const AssetManager::Asset &name) {
     return nullptr;
   }
   auto &node = nsNode->nodes.at(name.name);
+  if (!node.asset) {
+    load(std::format("{}:{}.{}", name.type, name.ns, name.name));
+  }
   return node.asset;
 }
 
