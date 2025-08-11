@@ -14,5 +14,8 @@ public:
   void reset(size_t size, void *data = 0) override;
   void write(void *data, size_t offset, size_t size) override;
   size_t getSize() const override;
+  void lock(void **ppOutput,
+            const ACCESS &access = IBuffer::ACCESS::READ_WRITE) override;
+  void unlock() override;
 };
 } // namespace cube::render

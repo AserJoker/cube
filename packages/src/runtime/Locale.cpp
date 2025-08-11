@@ -9,6 +9,9 @@ const std::string Locale::i18n(const std::string &key) {
   if (_locales.contains(key)) {
     return _locales.at(key);
   }
+  if (_defaults.contains(key)) {
+    return _locales.at(key);
+  }
   return key;
 }
 std::vector<std::string> Locale::getLanguages() {
@@ -21,18 +24,10 @@ std::vector<std::string> Locale::getLanguages() {
   std::sort(result.begin(), result.end());
   return result;
 }
-void Locale::setLanguage(const std::string &lang) {
-  _language = lang;
-  _locales.clear();
-  auto buf = _asset->query(std::format("lang:cube.i18n.{}", lang))
-                 ->cast<core::Buffer>();
-  if (!buf) {
-    if (lang == "en_US") {
-      return;
-    }
-    setLanguage("en_US");
-  }
-  std::stringstream ss((const char *)buf->getData());
+
+void Locale::parse(std::unordered_map<std::string, std::string> &locale,
+                   const std::string &source) {
+  std::stringstream ss(source.c_str());
   std::string line;
   while (std::getline(ss, line)) {
     size_t comment_pos = line.find('#');
@@ -62,9 +57,36 @@ void Locale::setLanguage(const std::string &lang) {
       if (value.front() == '\"') {
         value = value.substr(1, value.length() - 2);
       }
-      _locales[key] = value;
+      locale[key] = value;
     }
   }
 }
+void Locale::setLanguage(const std::string &lang) {
+  _locales.clear();
+  auto buf = _asset->query(std::format("lang:cube.i18n.{}", lang))
+                 ->cast<core::Buffer>();
+  if (!buf) {
+    if (lang == "en_US") {
+      return;
+    }
+    setLanguage("en_US");
+  }
+  parse(_locales, (const char *)buf->getData());
+  _language = lang;
+}
 const std::string &Locale::getLanguage() const { return _language; }
+void Locale::setDefault(const std::string &name) {
+  _defaults.clear();
+  auto buf = _asset->query(std::format("lang:cube.i18n.{}", name))
+                 ->cast<core::Buffer>();
+  if (!buf) {
+    if (name == "en_US") {
+      return;
+    }
+    setLanguage("en_US");
+  }
+  parse(_defaults, (const char *)buf->getData());
+  _default = name;
+}
+const std::string &Locale::getDefault() const { return _default; }
 }; // namespace cube::runtime

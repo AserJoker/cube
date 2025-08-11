@@ -21,6 +21,7 @@ private:
   static Application *_instance;
 
 private:
+  void onWindowClose();
   void runTick();
   void processEvent();
 

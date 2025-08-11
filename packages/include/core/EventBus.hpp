@@ -21,10 +21,10 @@ private:
   std::unordered_map<std::string, std::vector<Callback>> _callbacks;
 
 public:
-  template <class E> void emit(auto &&...args) {
+  template <class E> E emit(auto &&...args) {
     auto type = typeid(E).name();
+    E event{std::forward<decltype(args)>(args)...};
     if (_callbacks.contains(type)) {
-      E event{std::forward<decltype(args)>(args)...};
       auto &callbacks = _callbacks.at(type);
       size_t idx = 0;
       while (idx != callbacks.size()) {
@@ -37,6 +37,7 @@ public:
         }
       }
     }
+    return event;
   }
 
   template <class T, class E> void on(T *self, void (T::*callback)(E &e)) {

@@ -6,6 +6,7 @@
 #include "runtime/EventInitialize.hpp"
 #include "runtime/EventUninitialize.hpp"
 #include "runtime/EventUpdate.hpp"
+#include "runtime/EventWindowClose.hpp"
 #include "runtime/OpenGLWindow.hpp"
 #include <SDL3/SDL.h>
 #include <exception>
@@ -32,14 +33,24 @@ Application::~Application() {
 const std::vector<std::string> &Application::getArgv() const { return _argv; }
 
 void Application::runTick() {
-  processEvent();
   _eventBus->emit<EventUpdate>();
+  processEvent();
 }
+
+void Application::onWindowClose() {
+  delete _window;
+  _window = nullptr;
+  _running = false;
+}
+
 void Application::processEvent() {
   SDL_Event event;
   if (SDL_PollEvent(&event)) {
-    if (event.type == SDL_EVENT_QUIT) {
-      _running = false;
+    if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
+      auto e = _eventBus->emit<EventWindowClose>();
+      if (e.isDefault()) {
+        onWindowClose();
+      }
     }
   }
 }

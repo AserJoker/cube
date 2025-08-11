@@ -34,6 +34,11 @@ void OpenGLRenderer::removeShader(const std::string &name) {
     _shaders.erase(name);
   }
 };
+
+void OpenGLRenderer::setViewport(int32_t x, int32_t y, uint32_t w, uint32_t h) {
+  glViewport(x, y, w, h);
+}
+
 void OpenGLRenderer::draw(IMesh *mesh) {
   auto material = mesh->getMerial();
   auto geometory = mesh->getGeometory()->cast<OpenGLGeometory>();
@@ -44,11 +49,13 @@ void OpenGLRenderer::draw(IMesh *mesh) {
   } else {
     shader = _shaders.at(shaderName);
   }
-  glUseProgram(shader->getHandle());
+  if (_shader != shader) {
+    glUseProgram(shader->getHandle());
+  }
   glBindVertexArray(geometory->getHandle());
   glDrawElements(GL_TRIANGLES,
                  geometory->getIndexAttribute()->getSize() / sizeof(uint32_t),
                  GL_UNSIGNED_INT, 0);
-  glUseProgram(0);
+  glBindVertexArray(0);
 }
 } // namespace cube::render

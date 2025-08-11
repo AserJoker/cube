@@ -18,5 +18,6 @@ public:
       const std::unordered_map<IShader::Type, std::string> &sources) = 0;
   virtual IShader *getShader(const std::string &name) = 0;
   virtual void removeShader(const std::string &name) = 0;
+  virtual void setViewport(int32_t x, int32_t y, uint32_t w, uint32_t h) = 0;
 };
 } // namespace cube::render

@@ -12,12 +12,20 @@ private:
 
 private:
   std::unordered_map<std::string, std::string> _locales;
+  std::unordered_map<std::string, std::string> _defaults;
   std::string _language;
+  std::string _default;
+
+private:
+  static void parse(std::unordered_map<std::string, std::string> &locale,
+                    const std::string &source);
 
 public:
   const std::string i18n(const std::string &key);
   std::vector<std::string> getLanguages();
   void setLanguage(const std::string &name);
   const std::string &getLanguage() const;
+  void setDefault(const std::string &name);
+  const std::string &getDefault() const;
 };
 }; // namespace cube::runtime

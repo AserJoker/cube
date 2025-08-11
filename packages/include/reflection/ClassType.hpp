@@ -217,8 +217,21 @@ public:
 };
 }; // namespace cube::reflection
 
-#define CUBE_CLASS_DEF(name)
-#define CUBE_CLASS_EXTENDS(name)
-#define CUBE_PROPERTY(name)
-#define CUBE_METADATA(name, value)
-#define CUBE_REFLECTION
+#define CUBE_CLASS_DEF_BEGIN(clazz, ...)                                       \
+  static inline void registerReflection() {                                    \
+    using CURRENT_CLASS = clazz;                                               \
+    core::Singleton<reflection::ClassType<CURRENT_CLASS>>::get()
+#define CUBE_CLASS_EXTENDS(E)                                                  \
+  ->setExtends(core::Singleton<reflection::ClassType<E>>::get())
+#define CUBE_CONSTRUCTOR(args) ->construct<args>()
+#define CUBE_PROPERTY(name, ...)                                               \
+  ->property(#name, &CURRENT_CLASS::name, ##__VA_ARGS__)
+#define CUBE_CLASS_DEF_END()                                                   \
+  ;                                                                            \
+  }
+
+#define CUBE_CLASS_REFLECTION(clazz)                                           \
+  struct class##Reflection {                                                   \
+    class##Reflection() { clazz::registerReflection(); }                       \
+  };                                                                           \
+  static struct class##Reflection reflection;

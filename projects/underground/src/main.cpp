@@ -7,7 +7,10 @@
 #include "runtime/EventInitialize.hpp"
 #include "runtime/EventUninitialize.hpp"
 #include "runtime/EventUpdate.hpp"
+#include "runtime/EventWindowClose.hpp"
 #include "runtime/Locale.hpp"
+#include <SDL3/SDL_messagebox.h>
+#include <SDL3/SDL_video.h>
 #include <clocale>
 #include <filesystem>
 #include <string>
@@ -45,6 +48,12 @@ public:
 
   void onUninitialize(runtime::EventUninitialize &) {}
 
+  void onWindowClose(runtime::EventWindowClose &event) {
+    if (_window->confirm("Are you sure to close window") != "Ok") {
+      event.preventDefault();
+    }
+  }
+
   Underground() {
     _asset = core::Singleton<runtime::AssetManager>::get();
     _config = core::Singleton<runtime::ConfigManager>::get();
@@ -52,6 +61,7 @@ public:
     _eventBus->on(this, &Underground::onInitialize);
     _eventBus->on(this, &Underground::onUpdate);
     _eventBus->on(this, &Underground::onUninitialize);
+    _eventBus->on(this, &Underground::onWindowClose);
   }
 };
 auto main(int argc, char *argv[]) -> int {

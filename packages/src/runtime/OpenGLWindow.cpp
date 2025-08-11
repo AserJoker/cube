@@ -110,6 +110,8 @@ void OpenGLWindow::initOpenGLContext(int32_t major, int32_t minor) {
   glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr,
                         GL_TRUE);
   _renderer = create<render::OpenGLRenderer>();
+  _renderer->setViewport(0, 0, CUBE_DEFAULT_WINDOW_WIDTH,
+                         CUBE_DEFAULT_WINDOW_HEIGHT);
 }
 OpenGLWindow::~OpenGLWindow() {
   if (_glContext) {
@@ -118,7 +120,8 @@ OpenGLWindow::~OpenGLWindow() {
   }
 }
 SDL_Window *OpenGLWindow::createWindow() {
-  return SDL_CreateWindow("cube", 1024, 768, SDL_WINDOW_OPENGL);
+  return SDL_CreateWindow("cube", CUBE_DEFAULT_WINDOW_WIDTH,
+                          CUBE_DEFAULT_WINDOW_HEIGHT, SDL_WINDOW_OPENGL);
 }
 void OpenGLWindow::present() { SDL_GL_SwapWindow(getHandle()); }
 
