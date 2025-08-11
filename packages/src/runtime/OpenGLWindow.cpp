@@ -112,6 +112,7 @@ void OpenGLWindow::initOpenGLContext(int32_t major, int32_t minor) {
   _renderer = create<render::OpenGLRenderer>();
   _renderer->setViewport(0, 0, CUBE_DEFAULT_WINDOW_WIDTH,
                          CUBE_DEFAULT_WINDOW_HEIGHT);
+  _renderer->loadDefaultAssets();
 }
 OpenGLWindow::~OpenGLWindow() {
   if (_glContext) {

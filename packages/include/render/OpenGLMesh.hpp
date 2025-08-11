@@ -11,6 +11,6 @@ private:
 public:
   OpenGLMesh();
   IGeometory *getGeometory() override;
-  IMaterial *getMerial() override;
+  IMaterial *getMaterial() override;
 };
 } // namespace cube::render

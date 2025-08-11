@@ -79,6 +79,7 @@ public:
   Variable *getField(const std::string &name);
   Variable *setField(const std::string &name, Variable *item);
   bool delField(const std::string &name);
+  bool hasField(const std::string &name);
   std::vector<std::string> getKeys();
   Variable *setObject(Type *type, core::Object *self);
   core::Object *getObject();

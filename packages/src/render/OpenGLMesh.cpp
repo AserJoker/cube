@@ -6,5 +6,5 @@ OpenGLMesh::OpenGLMesh() {
   _material = create<OpenGLMaterial>();
 }
 IGeometory *OpenGLMesh::getGeometory() { return _geometory; };
-IMaterial *OpenGLMesh::getMerial() { return _material; };
+IMaterial *OpenGLMesh::getMaterial() { return _material; };
 } // namespace cube::render

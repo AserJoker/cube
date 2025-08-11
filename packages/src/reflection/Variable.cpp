@@ -405,6 +405,24 @@ bool Variable::delField(const std::string &name) {
   }
   return false;
 }
+bool Variable::hasField(const std::string &name) {
+  if (_type->getKind() == Type::Kind::DICT) {
+    if (_kind == Kind::ACCESSOR) {
+      auto &proxy = std::any_cast<DictProxy &>(_value);
+      if (!proxy.hasField) {
+        throw std::runtime_error(
+            "Failed to check field, hasField is undefined");
+      }
+      return proxy.hasField(name);
+    }
+    auto &dict =
+        std::any_cast<std::unordered_map<std::string, Variable *> &>(_value);
+    if (dict.contains(name)) {
+      return true;
+    }
+  }
+  return false;
+}
 std::vector<std::string> Variable::getKeys() {
   std::vector<std::string> keys;
   if (_type->getKind() == Type::Kind::DICT) {

@@ -22,6 +22,7 @@ set(CMAKE_CXX_STANDARD 23)
 
 include_directories(packages/include)
 find_package(SDL3 CONFIG REQUIRED)
+find_package(SDL3_image CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
