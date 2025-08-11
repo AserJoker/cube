@@ -7,8 +7,11 @@
 namespace cube::render {
 void Renderer::loadDefaultAssets() {
   loadShader("cube.shader.basic");
-  loadTexture("cube.texture.missing", "png:cube.texture.missing")
-      ->setNearestFilter();
+  auto missing =
+      loadTexture("cube.texture.missing", "png:cube.texture.missing");
+  if (missing) {
+    missing->setNearestFilter();
+  }
 };
 IShader *Renderer::loadShader(const std::string &name,
                               const std::string &asset) {

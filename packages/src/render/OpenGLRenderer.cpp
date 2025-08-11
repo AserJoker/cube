@@ -73,10 +73,10 @@ void OpenGLRenderer::draw(IMesh *mesh) {
   auto geometory = mesh->getGeometory()->cast<OpenGLGeometory>();
   auto &shaderName = material->getShader();
   OpenGLShader *shader = nullptr;
-  if (!_shaders.contains(shaderName)) {
-    shader = _shaders.at("cube.shader.default");
-  } else {
+  if (_shaders.contains(shaderName)) {
     shader = _shaders.at(shaderName);
+  } else if (_shaders.contains("cube.shader.default")) {
+    shader = _shaders.at("cube.shader.default");
   }
   if (!shader) {
     return;
