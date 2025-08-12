@@ -67,8 +67,40 @@ void OpenGLRenderer::removeTexture(const std::string &name) {
     _textures.erase(name);
   }
 }
+IRenderer *OpenGLRenderer::enableDepthTest() {
+  glEnable(GL_DEPTH_TEST);
+  return this;
+}
+IRenderer *OpenGLRenderer::disableDepthTest() {
+  glDisable(GL_DEPTH_TEST);
+  return this;
+}
+IRenderer *OpenGLRenderer::enableAlphaTest() {
+  glEnable(GL_ALPHA_TEST);
+  return this;
+}
+IRenderer *OpenGLRenderer::disableAlphaTest() {
+  glDisable(GL_ALPHA_TEST);
+  return this;
+}
+IRenderer *OpenGLRenderer::enableStencilTest() {
+  glEnable(GL_STENCIL_TEST);
+  return this;
+}
+IRenderer *OpenGLRenderer::disableStencilTest() {
+  glDisable(GL_STENCIL_TEST);
+  return this;
+}
+IRenderer *OpenGLRenderer::enableBlend() {
+  glEnable(GL_BLEND);
+  return this;
+};
+IRenderer *OpenGLRenderer::disableBlend() {
+  glDisable(GL_BLEND);
+  return this;
+};
 
-void OpenGLRenderer::draw(IMesh *mesh) {
+void OpenGLRenderer::draw(Camera *camera, IMesh *mesh) {
   auto material = mesh->getMaterial();
   auto geometory = mesh->getGeometory()->cast<OpenGLGeometory>();
   auto &shaderName = material->getShader();
@@ -99,6 +131,33 @@ void OpenGLRenderer::draw(IMesh *mesh) {
       shader->set(slot, idx);
     }
     idx++;
+  }
+  if (camera) {
+    shader->set("projection", camera->getProjection());
+    shader->set("view", camera->getView());
+  } else {
+    shader->set("projection", glm::mat4(1.0f));
+    shader->set("view", glm::mat4(1.0f));
+  }
+  if (material->isAlphaTest()) {
+    enableAlphaTest();
+  } else {
+    disableAlphaTest();
+  }
+  if (material->isDepthTest()) {
+    enableDepthTest();
+  } else {
+    disableDepthTest();
+  }
+  if (material->isStencilTest()) {
+    enableStencilTest();
+  } else {
+    disableStencilTest();
+  }
+  if (material->isBlend()) {
+    enableBlend();
+  } else {
+    disableBlend();
   }
   glBindVertexArray(geometory->getHandle());
   glDrawElements(GL_TRIANGLES,

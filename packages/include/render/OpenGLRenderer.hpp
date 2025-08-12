@@ -15,7 +15,7 @@ private:
 public:
   void setClearColor(float r, float g, float b, float a) override;
   void clear() override;
-  void draw(IMesh *mesh) override;
+  void draw(Camera *camera, IMesh *mesh) override;
   IMesh *createMesh() override;
   IShader *createShader(
       const std::string &name,
@@ -28,5 +28,13 @@ public:
                           void *data) override;
   ITexture *getTexture(const std::string &name) override;
   void removeTexture(const std::string &name) override;
+  IRenderer *enableDepthTest() override;
+  IRenderer *disableDepthTest() override;
+  IRenderer *enableAlphaTest() override;
+  IRenderer *disableAlphaTest() override;
+  IRenderer *enableStencilTest() override;
+  IRenderer *disableStencilTest() override;
+  IRenderer *enableBlend() override;
+  IRenderer *disableBlend() override;
 };
 } // namespace cube::render

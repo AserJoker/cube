@@ -3,8 +3,8 @@
 namespace cube::render {
 OpenGLMesh::OpenGLMesh() {
   _geometory = create<OpenGLGeometory>();
-  _material = create<OpenGLMaterial>();
+  _material = create<Material>();
 }
 IGeometory *OpenGLMesh::getGeometory() { return _geometory; };
-IMaterial *OpenGLMesh::getMaterial() { return _material; };
+Material *OpenGLMesh::getMaterial() { return _material; };
 } // namespace cube::render

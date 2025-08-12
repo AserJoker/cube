@@ -1,7 +1,9 @@
 #include "core/Singleton.hpp"
 #include "core/Subscriber.hpp"
+#include "render/Camera.hpp"
 #include "render/IMesh.hpp"
 #include "render/IRenderer.hpp"
+#include "render/PerspectiveCamera.hpp"
 #include "runtime/Application.hpp"
 #include "runtime/AssetManager.hpp"
 #include "runtime/ConfigManager.hpp"
@@ -37,6 +39,8 @@ private:
 
   render::IMesh *_mesh{};
 
+  render::Camera *_camera{};
+
 public:
   void onInitialize(runtime::EventInitialize &) {
     auto assetsPath = std::filesystem::current_path().append("assets").string();
@@ -59,7 +63,7 @@ public:
         {0.f, 0.f},
         {0.f, 1.f},
     };
-    uint32_t indices[] = {0, 1, 2, 0, 3, 2};
+    uint32_t indices[] = {0, 1, 3, 1, 2, 3};
     _mesh = _renderer->createMesh();
     auto geometory = _mesh->getGeometory();
 
@@ -77,11 +81,14 @@ public:
     auto material = _mesh->getMaterial();
     _renderer->loadTexture("cube.texture.sky", "jpg:cube.texture.sky");
     material->setTexture("texture", "cube.texture.sky");
+
+    _camera =
+        new render::PerspectiveCamera(45, 1024.0f / 768.0f, 0.1f, 1000.0f);
   }
 
   void onUpdate(runtime::EventUpdate &) {
     _renderer->clear();
-    _renderer->draw(_mesh);
+    _renderer->draw(_camera, _mesh);
     _window->present();
   }
 

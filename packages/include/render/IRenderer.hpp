@@ -3,6 +3,7 @@
 #include "IShader.hpp"
 #include "ITexture.hpp"
 #include "core/Object.hpp"
+#include "render/Camera.hpp"
 #include <glm/glm.hpp>
 #include <string>
 #include <unordered_map>
@@ -12,7 +13,7 @@ class IRenderer : public core::Object {
 public:
   virtual void setClearColor(float r, float g, float b, float a) = 0;
   virtual void clear() = 0;
-  virtual void draw(IMesh *mesh) = 0;
+  virtual void draw(Camera *camera, IMesh *mesh) = 0;
   virtual IMesh *createMesh() = 0;
   virtual IShader *createShader(
       const std::string &name,
@@ -31,5 +32,13 @@ public:
   virtual ITexture *getTexture(const std::string &name) = 0;
   virtual void removeTexture(const std::string &name) = 0;
   virtual void loadDefaultAssets() = 0;
+  virtual IRenderer *enableDepthTest() = 0;
+  virtual IRenderer *disableDepthTest() = 0;
+  virtual IRenderer *enableAlphaTest() = 0;
+  virtual IRenderer *disableAlphaTest() = 0;
+  virtual IRenderer *enableStencilTest() = 0;
+  virtual IRenderer *disableStencilTest() = 0;
+  virtual IRenderer *enableBlend() = 0;
+  virtual IRenderer *disableBlend() = 0;
 };
 } // namespace cube::render
