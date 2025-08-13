@@ -1,14 +1,16 @@
 #pragma once
+#include "Geometory.hpp"
 #include "IAttribute.hpp"
 #include "IGeometory.hpp"
-#include "OpenGLBuffer.hpp"
+#include "OpenGLAttribute.hpp"
+#include <cstdint>
 #include <unordered_map>
 namespace cube::render {
-class OpenGLGeometory : public IGeometory {
+class OpenGLGeometory : public Geometory {
 private:
   uint32_t _handle;
-  std::unordered_map<uint32_t, OpenGLBuffer *> _attributes;
-  OpenGLBuffer *_indexAttribute;
+  std::unordered_map<uint32_t, IAttribute *> _attributes;
+  OpenGLAttribute *_indexAttribute;
 
 public:
   OpenGLGeometory();
@@ -16,10 +18,14 @@ public:
   IAttribute *createAttribute(uint32_t idx, bool normalize, size_t stride,
                               void *offset) override;
   IAttribute *getAttribute(uint32_t idx) override;
-  void removeAttribute(uint32_t idx) override;
-  void enableAttribute(uint32_t idx) override;
-  void disableAttribute(uint32_t idx) override;
+  IGeometory *removeAttribute(uint32_t idx) override;
+  IGeometory *enableAttribute(uint32_t idx) override;
+  IGeometory *disableAttribute(uint32_t idx) override;
   IAttribute *getIndexAttribute() override;
+  IAttribute *createIndexAttribute() override;
+  IGeometory *removeIndexAttribute() override;
   uint32_t getHandle() const;
+  const std::unordered_map<uint32_t, IAttribute *> &
+  getAttributes() const override;
 };
 }; // namespace cube::render

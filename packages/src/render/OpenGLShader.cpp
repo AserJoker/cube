@@ -6,7 +6,9 @@
 namespace cube::render {
 
 OpenGLShader::OpenGLShader(
-    const std::unordered_map<IShader::Type, std::string> &sources) {
+    const std::string &name,
+    const std::unordered_map<IShader::Type, std::string> &sources)
+    : Shader(name) {
   _handle = glCreateProgram();
   for (auto &[type, src] : sources) {
     GLenum t;

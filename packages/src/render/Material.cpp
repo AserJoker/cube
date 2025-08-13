@@ -79,4 +79,9 @@ Material *Material::disableBlend() {
   _blend = false;
   return this;
 }
+const RenderMode &Material::getRenderMode() const { return _mode; }
+Material *Material::setRenderMode(const RenderMode &mode) {
+  _mode = mode;
+  return this;
+}
 }; // namespace cube::render

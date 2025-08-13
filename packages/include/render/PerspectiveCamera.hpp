@@ -10,6 +10,7 @@ private:
   float _zoom;
 
 public:
-  PerspectiveCamera(float fov, float aspect, float near, float far);
+  PerspectiveCamera(float fov, uint32_t width, uint32_t height, float near,
+                    float far);
 };
 } // namespace cube::render

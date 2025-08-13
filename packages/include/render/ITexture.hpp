@@ -4,7 +4,7 @@
 namespace cube::render {
 class ITexture : public core::Object {
 public:
-  enum class FORMAT { RGB24, RGBA32, GRAY };
+  enum class Format { RGB24, RGBA32, GRAY };
 
 public:
   virtual ITexture *setRepeatWrap() = 0;

@@ -10,19 +10,19 @@ OpenGLTexture::~OpenGLTexture() {
   }
 }
 void OpenGLTexture::setImage(uint32_t width, uint32_t height,
-                             const ITexture::FORMAT &fmt, void *data) {
+                             const ITexture::Format &fmt, void *data) {
   GLenum format;
   uint8_t size;
   switch (fmt) {
-  case ITexture::FORMAT::RGB24:
+  case ITexture::Format::RGB24:
     size = 3;
     format = GL_RGB;
     break;
-  case ITexture::FORMAT::RGBA32:
+  case ITexture::Format::RGBA32:
     size = 4;
     format = GL_RGBA;
     break;
-  case ITexture::FORMAT::GRAY:
+  case ITexture::Format::GRAY:
     size = 1;
     format = GL_RED;
     break;

@@ -75,11 +75,11 @@ ITexture *Renderer::loadTexture(const std::string &name,
   switch (img->format) {
   case SDL_PIXELFORMAT_INDEX8:
     texture = createTexture(name, img->w, img->h,
-                            render::ITexture::FORMAT::GRAY, img->pixels);
+                            render::ITexture::Format::GRAY, img->pixels);
     break;
   case SDL_PIXELFORMAT_RGB24:
     texture = createTexture(name, img->w, img->h,
-                            render::ITexture::FORMAT::RGB24, img->pixels);
+                            render::ITexture::Format::RGB24, img->pixels);
     break;
   default: {
     auto convert = SDL_ConvertSurface(img, SDL_PIXELFORMAT_RGBA32);
@@ -89,7 +89,7 @@ ITexture *Renderer::loadTexture(const std::string &name,
   case SDL_PIXELFORMAT_RGBA8888:
   case SDL_PIXELFORMAT_RGBA32:
     texture = createTexture(name, img->w, img->h,
-                            render::ITexture::FORMAT::RGBA32, img->pixels);
+                            render::ITexture::Format::RGBA32, img->pixels);
     break;
   }
   SDL_DestroySurface(img);

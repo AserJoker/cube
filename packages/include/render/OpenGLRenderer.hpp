@@ -15,7 +15,8 @@ private:
 public:
   void setClearColor(float r, float g, float b, float a) override;
   void clear() override;
-  void draw(Camera *camera, IMesh *mesh) override;
+  void draw(ICamera *camera, IMesh *mesh) override;
+  IRenderer *draw(const RenderMode &mode, IGeometory *geometory) override;
   IMesh *createMesh() override;
   IShader *createShader(
       const std::string &name,
@@ -24,10 +25,14 @@ public:
   void removeShader(const std::string &name) override;
   void setViewport(int32_t x, int32_t y, uint32_t w, uint32_t h) override;
   ITexture *createTexture(const std::string &name, uint32_t width,
-                          uint32_t height, const ITexture::FORMAT &format,
+                          uint32_t height, const ITexture::Format &format,
                           void *data) override;
   ITexture *getTexture(const std::string &name) override;
   void removeTexture(const std::string &name) override;
+
+  IRenderer *setShader(const std::string &shader) override;
+  IShader *getShader() override;
+  IRenderer *setMaterial(Material *material) override;
   IRenderer *enableDepthTest() override;
   IRenderer *disableDepthTest() override;
   IRenderer *enableAlphaTest() override;

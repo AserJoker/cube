@@ -22,7 +22,7 @@ IShader *OpenGLRenderer::createShader(
     const std::string &name,
     const std::unordered_map<IShader::Type, std::string> &sources) {
   removeShader(name);
-  auto shader = create<OpenGLShader>(sources);
+  auto shader = create<OpenGLShader>(name, sources);
   _shaders[name] = shader;
   return shader;
 };
@@ -47,7 +47,7 @@ void OpenGLRenderer::setViewport(int32_t x, int32_t y, uint32_t w, uint32_t h) {
 
 ITexture *OpenGLRenderer::createTexture(const std::string &name, uint32_t width,
                                         uint32_t height,
-                                        const ITexture::FORMAT &format,
+                                        const ITexture::Format &format,
                                         void *data) {
   removeTexture(name);
   OpenGLTexture *texture = create<OpenGLTexture>();
@@ -66,6 +66,65 @@ void OpenGLRenderer::removeTexture(const std::string &name) {
     delete _textures[name];
     _textures.erase(name);
   }
+}
+
+IRenderer *OpenGLRenderer::setShader(const std::string &name) {
+  if (_shader && _shader->getName() == name) {
+    return this;
+  }
+  OpenGLShader *shader = nullptr;
+  if (_shaders.contains(name)) {
+    shader = _shaders.at(name);
+  } else if (_shaders.contains("cube.shader.default")) {
+    shader = _shaders.at("cube.shader.default");
+  }
+  _shader = shader;
+  if (_shader) {
+    glUseProgram(_shader->getHandle());
+  }
+  return this;
+}
+IShader *OpenGLRenderer::getShader() { return _shader; }
+
+IRenderer *OpenGLRenderer::setMaterial(Material *material) {
+  setShader(material->getShader());
+  auto &textures = material->getTextures();
+  int idx = 0;
+  for (auto &[slot, name] : textures) {
+    OpenGLTexture *texture = nullptr;
+    if (_textures.contains(name)) {
+      texture = _textures.at(name);
+    } else if (_textures.contains("cube.texture.missing")) {
+      texture = _textures.at("cube.texture.missing");
+    }
+    if (texture) {
+      glActiveTexture(GL_TEXTURE0 + idx);
+      glBindTexture(GL_TEXTURE_2D, texture->getHandle());
+      _shader->set(slot, idx);
+    }
+    idx++;
+  }
+  if (material->isAlphaTest()) {
+    enableAlphaTest();
+  } else {
+    disableAlphaTest();
+  }
+  if (material->isDepthTest()) {
+    enableDepthTest();
+  } else {
+    disableDepthTest();
+  }
+  if (material->isStencilTest()) {
+    enableStencilTest();
+  } else {
+    disableStencilTest();
+  }
+  if (material->isBlend()) {
+    enableBlend();
+  } else {
+    disableBlend();
+  }
+  return this;
 }
 IRenderer *OpenGLRenderer::enableDepthTest() {
   glEnable(GL_DEPTH_TEST);
@@ -100,69 +159,74 @@ IRenderer *OpenGLRenderer::disableBlend() {
   return this;
 };
 
-void OpenGLRenderer::draw(Camera *camera, IMesh *mesh) {
+void OpenGLRenderer::draw(ICamera *camera, IMesh *mesh) {
   auto material = mesh->getMaterial();
   auto geometory = mesh->getGeometory()->cast<OpenGLGeometory>();
-  auto &shaderName = material->getShader();
-  OpenGLShader *shader = nullptr;
-  if (_shaders.contains(shaderName)) {
-    shader = _shaders.at(shaderName);
-  } else if (_shaders.contains("cube.shader.default")) {
-    shader = _shaders.at("cube.shader.default");
-  }
-  if (!shader) {
+  setMaterial(material);
+  if (!_shader) {
     return;
   }
-  if (_shader != shader) {
-    glUseProgram(shader->getHandle());
-  }
-  auto &textures = material->getTextures();
-  int idx = 0;
-  for (auto &[slot, name] : textures) {
-    OpenGLTexture *texture = nullptr;
-    if (_textures.contains(name)) {
-      texture = _textures.at(name);
-    } else if (_textures.contains("cube.texture.missing")) {
-      texture = _textures.at("cube.texture.missing");
-    }
-    if (texture) {
-      glActiveTexture(GL_TEXTURE0 + idx);
-      glBindTexture(GL_TEXTURE_2D, texture->getHandle());
-      shader->set(slot, idx);
-    }
-    idx++;
-  }
   if (camera) {
-    shader->set("projection", camera->getProjection());
-    shader->set("view", camera->getView());
+    _shader->set("projection", camera->getProjection());
+    _shader->set("view", camera->getView());
   } else {
-    shader->set("projection", glm::mat4(1.0f));
-    shader->set("view", glm::mat4(1.0f));
+    _shader->set("projection", glm::mat4(1.0f));
+    _shader->set("view", glm::mat4(1.0f));
   }
-  if (material->isAlphaTest()) {
-    enableAlphaTest();
+  draw(material->getRenderMode(), geometory);
+}
+IRenderer *OpenGLRenderer::draw(const RenderMode &mode, IGeometory *geometory) {
+  auto geo = geometory->cast<OpenGLGeometory>();
+  _shader->set("model", geo->getMatrix());
+  GLenum m;
+  switch (mode) {
+  case RenderMode::POINTS:
+    m = GL_POINTS;
+    break;
+  case RenderMode::LINE_STRIP:
+    m = GL_LINE_STRIP;
+    break;
+  case RenderMode::LINE_LOOP:
+    m = GL_LINE_LOOP;
+    break;
+  case RenderMode::LINES:
+    m = GL_LINES;
+    break;
+  case RenderMode::LINE_STRIP_ADJACENCY:
+    m = GL_LINE_STRIP_ADJACENCY;
+    break;
+  case RenderMode::LINES_ADJACENCY:
+    m = GL_LINES_ADJACENCY;
+    break;
+  case RenderMode::TRIANGLE_STRIP:
+    m = GL_TRIANGLE_STRIP;
+    break;
+  case RenderMode::TRIANGLE_FAN:
+    m = GL_TRIANGLE_FAN;
+    break;
+  case RenderMode::TRIANGLES:
+    m = GL_TRIANGLES;
+    break;
+  case RenderMode::TRIANGLE_STRIP_ADJACENCY:
+    m = GL_TRIANGLE_STRIP_ADJACENCY;
+    break;
+  case RenderMode::TRIANGLES_ADJACENCY:
+    m = GL_TRIANGLES_ADJACENCY;
+    break;
+  case RenderMode::PATCHES:
+    m = GL_PATCHES;
+    break;
+  }
+  glBindVertexArray(geo->getHandle());
+  if (geometory->getIndexAttribute()) {
+    glDrawElements(m,
+                   geometory->getIndexAttribute()->getSize() / sizeof(uint32_t),
+                   GL_UNSIGNED_INT, 0);
   } else {
-    disableAlphaTest();
+    auto &[_, attr] = *geometory->getAttributes().begin();
+    glDrawArrays(m, 0, attr->getSize() / (sizeof(float) * attr->getStride()));
   }
-  if (material->isDepthTest()) {
-    enableDepthTest();
-  } else {
-    disableDepthTest();
-  }
-  if (material->isStencilTest()) {
-    enableStencilTest();
-  } else {
-    disableStencilTest();
-  }
-  if (material->isBlend()) {
-    enableBlend();
-  } else {
-    disableBlend();
-  }
-  glBindVertexArray(geometory->getHandle());
-  glDrawElements(GL_TRIANGLES,
-                 geometory->getIndexAttribute()->getSize() / sizeof(uint32_t),
-                 GL_UNSIGNED_INT, 0);
   glBindVertexArray(0);
+  return this;
 }
 } // namespace cube::render

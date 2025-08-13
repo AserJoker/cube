@@ -21,6 +21,8 @@
 #include <SDL3_image/SDL_image.h>
 #include <clocale>
 #include <filesystem>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/trigonometric.hpp>
 #include <string>
 
 #ifdef __WIN32__
@@ -75,15 +77,18 @@ public:
     attr->reset(sizeof(texcoords), texcoords);
     geometory->enableAttribute(1);
 
-    auto index = geometory->getIndexAttribute();
+    auto index = geometory->createIndexAttribute();
     index->reset(sizeof(indices), indices);
 
     auto material = _mesh->getMaterial();
     _renderer->loadTexture("cube.texture.sky", "jpg:cube.texture.sky");
     material->setTexture("texture", "cube.texture.sky");
 
-    _camera =
-        new render::PerspectiveCamera(45, 1024.0f / 768.0f, 0.1f, 1000.0f);
+    _camera = new render::PerspectiveCamera(45, 1024, 768, 0.1f, 1000.0f);
+    
+    auto rot =
+        glm::rotate(glm::mat4(1.0f), glm::radians(-55.f), glm::vec3(1.0f, 0, 0));
+    _mesh->getGeometory()->applyMatrix(rot);
   }
 
   void onUpdate(runtime::EventUpdate &) {

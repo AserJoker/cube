@@ -1,4 +1,5 @@
 #pragma once
+#include "RenderMode.hpp"
 #include "core/Object.hpp"
 #include <string>
 #include <unordered_map>
@@ -14,6 +15,7 @@ private:
   bool _transparent = false;
   float _opacity = 1.0f;
   bool _blend = false;
+  RenderMode _mode = RenderMode::TRIANGLES;
 
 public:
   Material();
@@ -42,5 +44,8 @@ public:
   bool isBlend() const;
   Material *enableBlend();
   Material *disableBlend();
+  const RenderMode& getRenderMode() const;
+  Material * setRenderMode(const RenderMode& mode);
+
 };
 } // namespace cube::render

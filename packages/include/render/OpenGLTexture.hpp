@@ -8,7 +8,7 @@ private:
 public:
   OpenGLTexture();
   ~OpenGLTexture() override;
-  void setImage(uint32_t width, uint32_t height, const ITexture::FORMAT &fmt,
+  void setImage(uint32_t width, uint32_t height, const ITexture::Format &fmt,
                 void *data);
   uint32_t getHandle() const;
 

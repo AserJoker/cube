@@ -1,15 +1,17 @@
 #pragma once
 #include "IShader.hpp"
+#include "render/Shader.hpp"
 #include <cstdint>
 #include <string>
 #include <unordered_map>
 namespace cube::render {
-class OpenGLShader : public IShader {
+class OpenGLShader : public Shader {
 private:
   uint32_t _handle;
 
 public:
-  OpenGLShader(const std::unordered_map<IShader::Type, std::string> &sources);
+  OpenGLShader(const std::string &name,
+               const std::unordered_map<IShader::Type, std::string> &sources);
   ~OpenGLShader() override;
   uint32_t getHandle() const;
   void set(const std::string &name, bool value) override;

@@ -34,16 +34,16 @@ size_t OpenGLBuffer::getSize() const {
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   return size;
 }
-void OpenGLBuffer::lock(void **ppOutput, const ACCESS &access) {
+void OpenGLBuffer::lock(void **ppOutput, const Access &access) {
   GLenum glAccess;
   switch (access) {
-  case IBuffer::ACCESS::READ_ONLY:
+  case IBuffer::Access::READ_ONLY:
     glAccess = GL_READ_ONLY;
     break;
-  case IBuffer::ACCESS::WRITE_ONLY:
+  case IBuffer::Access::WRITE_ONLY:
     glAccess = GL_WRITE_ONLY;
     break;
-  case IBuffer::ACCESS::READ_WRITE:
+  case IBuffer::Access::READ_WRITE:
     glAccess = GL_READ_WRITE;
     break;
   }

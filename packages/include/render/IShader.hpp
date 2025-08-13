@@ -15,6 +15,7 @@ public:
   };
 
 public:
+  virtual const std::string &getName() const = 0;
   virtual void set(const std::string &name, bool value) = 0;
   virtual void set(const std::string &name, int value) = 0;
   virtual void set(const std::string &name, float value) = 0;
