@@ -26,6 +26,9 @@ public:
   std::tuple<uint32_t, uint32_t> getSize() const override;
   void setPosition(int32_t x, int32_t y) override;
   std::tuple<int32_t, int32_t> getPosition() const;
+  void captureMouse() override;
+  void uncaptureMouse() override;
+  bool isCaptureMouse() override;
   const std::string &
   information(const std::string &message,
               const std::vector<std::string> &buttons = {"Ok"},

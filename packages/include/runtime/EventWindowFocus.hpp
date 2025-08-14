@@ -2,12 +2,12 @@
 #include "core/Event.hpp"
 #include "runtime/IWindow.hpp"
 namespace cube::runtime {
-class EventWindowClose : public core::Event<"cube.runtime.WindowClose"> {
+class EventWindowFocus : public core::Event<"cube.runtime.WindowFocus"> {
 private:
   IWindow *_win;
 
 public:
-  EventWindowClose(IWindow *win) : _win(win) {}
+  EventWindowFocus(IWindow *win) : _win(win) {}
   IWindow *getWindow() { return _win; }
 };
 }; // namespace cube::runtime

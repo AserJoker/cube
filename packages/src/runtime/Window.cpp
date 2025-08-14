@@ -1,6 +1,7 @@
 #include "runtime/Window.hpp"
 #include "SDL3/SDL_video.h"
 #include <SDL3/SDL_messagebox.h>
+#include <SDL3/SDL_mouse.h>
 namespace cube::runtime {
 Window::Window(SDL_Window *handle) : _handle(handle) {}
 Window::~Window() {
@@ -46,6 +47,15 @@ std::tuple<int32_t, int32_t> Window::getPosition() const {
   }
   return {};
 }
+void Window::captureMouse() { SDL_SetWindowRelativeMouseMode(_handle, true); }
+
+void Window::uncaptureMouse() {
+  SDL_SetWindowRelativeMouseMode(_handle, false);
+}
+bool Window::isCaptureMouse() {
+  return SDL_GetWindowRelativeMouseMode(_handle);
+}
+
 const std::string &Window::information(const std::string &message,
                                        const std::vector<std::string> &buttons,
                                        const std::string &title) {

@@ -22,5 +22,9 @@ public:
   Camera *setPosition(const glm::vec3 &pos);
   Camera *setUp(const glm::vec3 &up);
   Camera *setDirection(const glm::vec3 &target);
+  Camera *move(const glm::vec3 &v);
+  Camera *yaw(float angle);
+  Camera *pitch(float angle);
+  Camera *roll(float angle);
 };
 }; // namespace cube::render

@@ -39,3 +39,11 @@ public:
   static void *operator new(size_t size) noexcept = delete;
 };
 } // namespace cube::runtime
+namespace cube::core {
+template <> class Singleton<runtime::Application> {
+public:
+  static runtime::Application *get() {
+    return runtime::Application::getInstance();
+  }
+};
+} // namespace cube::core

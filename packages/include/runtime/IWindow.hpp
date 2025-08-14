@@ -14,6 +14,9 @@ public:
   virtual void setSize(uint32_t width, uint32_t height) = 0;
   virtual std::tuple<uint32_t, uint32_t> getSize() const = 0;
   virtual void present() = 0;
+  virtual void captureMouse() = 0;
+  virtual void uncaptureMouse() = 0;
+  virtual bool isCaptureMouse() = 0;
   virtual const std::string &
   information(const std::string &message,
               const std::vector<std::string> &buttons = {"Ok"},

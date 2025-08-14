@@ -8,22 +8,19 @@
 #include "runtime/AssetManager.hpp"
 #include "runtime/ConfigManager.hpp"
 #include "runtime/EventInitialize.hpp"
+#include "runtime/EventKeyDown.hpp"
+#include "runtime/EventKeyUp.hpp"
+#include "runtime/EventMouseButtonDown.hpp"
+#include "runtime/EventMouseMove.hpp"
 #include "runtime/EventUninitialize.hpp"
 #include "runtime/EventUpdate.hpp"
 #include "runtime/EventWindowClose.hpp"
 #include "runtime/Locale.hpp"
-#include <SDL3/SDL_iostream.h>
-#include <SDL3/SDL_messagebox.h>
-#include <SDL3/SDL_oldnames.h>
-#include <SDL3/SDL_pixels.h>
-#include <SDL3/SDL_surface.h>
-#include <SDL3/SDL_video.h>
-#include <SDL3_image/SDL_image.h>
 #include <clocale>
+#include <cstdint>
 #include <filesystem>
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/trigonometric.hpp>
 #include <string>
+#include <unordered_map>
 
 #ifdef __WIN32__
 #include <windows.h>
@@ -42,6 +39,10 @@ private:
   render::IMesh *_mesh{};
 
   render::Camera *_camera{};
+
+  glm::vec3 _speed{0, 0, 0};
+
+  std::unordered_map<uint32_t, bool> _keymaps;
 
 public:
   void onInitialize(runtime::EventInitialize &) {
@@ -85,13 +86,40 @@ public:
     material->setTexture("texture", "cube.texture.sky");
 
     _camera = new render::PerspectiveCamera(45, 1024, 768, 0.1f, 1000.0f);
-    
-    auto rot =
-        glm::rotate(glm::mat4(1.0f), glm::radians(-55.f), glm::vec3(1.0f, 0, 0));
-    _mesh->getGeometory()->applyMatrix(rot);
   }
 
-  void onUpdate(runtime::EventUpdate &) {
+  void onUpdate(runtime::EventUpdate &event) {
+    // _mesh->getGeometory()->rotate(0.1f, glm::vec3(1, 0, 0));
+    if (_keymaps.contains('a')) {
+      _speed.x = -0.5;
+    } else if (_keymaps.contains('d')) {
+      _speed.x = 0.5;
+    } else {
+      _speed.x = 0;
+    }
+    if (_keymaps.contains('w')) {
+      _speed.z = 0.5;
+    } else if (_keymaps.contains('s')) {
+      _speed.z = -0.5;
+    } else {
+      _speed.z = 0;
+    }
+    auto timespeed = (event.getTick() / 1000.0f);
+    static float roll = 0.0f;
+    if (_keymaps.contains('e')) {
+      if (roll < 45.0f) {
+        roll += 22.5f * timespeed;
+      }
+      _camera->roll(22.5f * timespeed);
+    } else if (_keymaps.contains('q')) {
+      if (roll > -45.0f) {
+        roll -= 22.5f * timespeed;
+      }
+      _camera->roll(-22.5f * timespeed);
+    } else {
+      _camera->setUp({0, 1, 0});
+    }
+    _camera->move(_speed * timespeed);
     _renderer->clear();
     _renderer->draw(_camera, _mesh);
     _window->present();
@@ -101,6 +129,41 @@ public:
 
   void onWindowClose(runtime::EventWindowClose &event) {}
 
+  void onKeyDown(runtime::EventKeyDown &event) {
+    if (event.getCode() == 0x1b) {
+      _window->uncaptureMouse();
+    }
+    _keymaps[event.getCode()] = true;
+  }
+
+  void onKeyUp(runtime::EventKeyUp &event) { _keymaps.erase(event.getCode()); }
+
+  void onMouseMove(runtime::EventMouseMove &event) {
+    if (!_window->isCaptureMouse()) {
+      return;
+    }
+    auto &mot = event.getMotion();
+    float yaw = mot.x * 0.05;
+    _camera->yaw(-yaw);
+    float pitch = mot.y * 0.05;
+    if (pitch < -90) {
+      pitch = -90;
+    }
+    if (pitch > 90) {
+      pitch = 90;
+    }
+    _camera->pitch(-pitch);
+    if (!_keymaps.contains('e') && !_keymaps.contains('q')) {
+      _camera->setUp({0, 1, 0});
+    }
+  }
+  void onMouseButtonDown(runtime::EventMouseButtonDown &event) {
+    if (!_window->isCaptureMouse()) {
+      _window->captureMouse();
+      return;
+    }
+  }
+
   Underground() {
     _asset = core::Singleton<runtime::AssetManager>::get();
     _config = core::Singleton<runtime::ConfigManager>::get();
@@ -109,6 +172,10 @@ public:
     _eventBus->on(this, &Underground::onUpdate);
     _eventBus->on(this, &Underground::onUninitialize);
     _eventBus->on(this, &Underground::onWindowClose);
+    _eventBus->on(this, &Underground::onMouseMove);
+    _eventBus->on(this, &Underground::onMouseButtonDown);
+    _eventBus->on(this, &Underground::onKeyDown);
+    _eventBus->on(this, &Underground::onKeyUp);
   }
 };
 auto main(int argc, char *argv[]) -> int {
