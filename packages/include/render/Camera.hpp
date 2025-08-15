@@ -26,5 +26,6 @@ public:
   Camera *yaw(float angle);
   Camera *pitch(float angle);
   Camera *roll(float angle);
+  virtual Camera *zoom(float zoom) = 0;
 };
 }; // namespace cube::render

@@ -8,6 +8,7 @@
 #include "runtime/EventMouseButtonDown.hpp"
 #include "runtime/EventMouseButtonUp.hpp"
 #include "runtime/EventMouseMove.hpp"
+#include "runtime/EventMouseWheel.hpp"
 #include "runtime/EventSDL.hpp"
 #include "runtime/EventUninitialize.hpp"
 #include "runtime/EventUpdate.hpp"
@@ -74,6 +75,8 @@ void Application::processEvent() {
     } else if (event.type == SDL_EVENT_MOUSE_MOTION) {
       _eventBus->emit<EventMouseMove>(
           glm::ivec2{event.motion.xrel, event.motion.yrel});
+    } else if (event.type == SDL_EVENT_MOUSE_WHEEL) {
+      _eventBus->emit<EventMouseWheel>(glm::vec2(event.wheel.x, event.wheel.y));
     } else if (event.type == SDL_EVENT_KEY_DOWN) {
       _eventBus->emit<EventKeyDown>(event.key.key);
     } else if (event.type == SDL_EVENT_KEY_UP) {

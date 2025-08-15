@@ -12,6 +12,7 @@
 #include "runtime/EventKeyUp.hpp"
 #include "runtime/EventMouseButtonDown.hpp"
 #include "runtime/EventMouseMove.hpp"
+#include "runtime/EventMouseWheel.hpp"
 #include "runtime/EventUninitialize.hpp"
 #include "runtime/EventUpdate.hpp"
 #include "runtime/EventWindowClose.hpp"
@@ -89,7 +90,6 @@ public:
   }
 
   void onUpdate(runtime::EventUpdate &event) {
-    // _mesh->getGeometory()->rotate(0.1f, glm::vec3(1, 0, 0));
     if (_keymaps.contains('a')) {
       _speed.x = -0.5;
     } else if (_keymaps.contains('d')) {
@@ -109,14 +109,15 @@ public:
     if (_keymaps.contains('e')) {
       if (roll < 45.0f) {
         roll += 22.5f * timespeed;
+        _camera->roll(22.5f * timespeed);
       }
-      _camera->roll(22.5f * timespeed);
     } else if (_keymaps.contains('q')) {
       if (roll > -45.0f) {
         roll -= 22.5f * timespeed;
+        _camera->roll(-22.5f * timespeed);
       }
-      _camera->roll(-22.5f * timespeed);
     } else {
+      roll = 0;
       _camera->setUp({0, 1, 0});
     }
     _camera->move(_speed * timespeed);
@@ -163,6 +164,9 @@ public:
       return;
     }
   }
+  void onMouseWheel(runtime::EventMouseWheel &event) {
+    _camera->zoom(event.getDelta().y * -0.5);
+  }
 
   Underground() {
     _asset = core::Singleton<runtime::AssetManager>::get();
@@ -176,6 +180,7 @@ public:
     _eventBus->on(this, &Underground::onMouseButtonDown);
     _eventBus->on(this, &Underground::onKeyDown);
     _eventBus->on(this, &Underground::onKeyUp);
+    _eventBus->on(this, &Underground::onMouseWheel);
   }
 };
 auto main(int argc, char *argv[]) -> int {
