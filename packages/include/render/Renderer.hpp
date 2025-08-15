@@ -7,6 +7,6 @@ public:
                         const std::string &asset) override;
   IShader *loadShader(const std::string &name,
                       const std::string &asset = "") override;
-  void loadDefaultAssets() override;
+  IRenderer *loadDefaultAssets() override;
 };
 }; // namespace cube::render

@@ -10,11 +10,13 @@
 #include <unordered_map>
 
 namespace cube::render {
-void OpenGLRenderer::clear() {
+IRenderer *OpenGLRenderer::clear() {
   glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  return this;
 }
-void OpenGLRenderer::setClearColor(float r, float g, float b, float a) {
+IRenderer *OpenGLRenderer::setClearColor(float r, float g, float b, float a) {
   glClearColor(r, g, b, a);
+  return this;
 }
 IMesh *OpenGLRenderer::createMesh() { return create<OpenGLMesh>(); }
 
@@ -34,15 +36,18 @@ IShader *OpenGLRenderer::getShader(const std::string &name) {
   return nullptr;
 };
 
-void OpenGLRenderer::removeShader(const std::string &name) {
+IRenderer *OpenGLRenderer::removeShader(const std::string &name) {
   if (_shaders.contains(name)) {
     delete _shaders.at(name);
     _shaders.erase(name);
   }
+  return this;
 };
 
-void OpenGLRenderer::setViewport(int32_t x, int32_t y, uint32_t w, uint32_t h) {
+IRenderer *OpenGLRenderer::setViewport(int32_t x, int32_t y, uint32_t w,
+                                       uint32_t h) {
   glViewport(x, y, w, h);
+  return this;
 }
 
 ITexture *OpenGLRenderer::createTexture(const std::string &name, uint32_t width,
@@ -61,11 +66,12 @@ ITexture *OpenGLRenderer::getTexture(const std::string &name) {
   }
   return nullptr;
 }
-void OpenGLRenderer::removeTexture(const std::string &name) {
+IRenderer *OpenGLRenderer::removeTexture(const std::string &name) {
   if (_textures.contains(name)) {
     delete _textures[name];
     _textures.erase(name);
   }
+  return this;
 }
 
 IRenderer *OpenGLRenderer::setShader(const std::string &name) {
@@ -159,12 +165,12 @@ IRenderer *OpenGLRenderer::disableBlend() {
   return this;
 };
 
-void OpenGLRenderer::draw(ICamera *camera, IMesh *mesh) {
+IRenderer *OpenGLRenderer::draw(ICamera *camera, IMesh *mesh) {
   auto material = mesh->getMaterial();
   auto geometory = mesh->getGeometory()->cast<OpenGLGeometory>();
   setMaterial(material);
   if (!_shader) {
-    return;
+    return this;
   }
   if (camera) {
     _shader->set("projection", camera->getProjection());
@@ -174,6 +180,7 @@ void OpenGLRenderer::draw(ICamera *camera, IMesh *mesh) {
     _shader->set("view", glm::mat4(1.0f));
   }
   draw(material->getRenderMode(), geometory);
+  return this;
 }
 IRenderer *OpenGLRenderer::draw(const RenderMode &mode, IGeometory *geometory) {
   auto geo = geometory->cast<OpenGLGeometory>();

@@ -1,17 +1,19 @@
 #include "render/Renderer.hpp"
 #include "core/Buffer.hpp"
 #include "core/Singleton.hpp"
+#include "render/IRenderer.hpp"
 #include "runtime/AssetManager.hpp"
 #include "serialization/json.hpp"
 #include <SDL3_image/SDL_image.h>
 namespace cube::render {
-void Renderer::loadDefaultAssets() {
+IRenderer *Renderer::loadDefaultAssets() {
   loadShader("cube.shader.basic");
   auto missing =
       loadTexture("cube.texture.missing", "png:cube.texture.missing");
   if (missing) {
     missing->setNearestFilter();
   }
+  return this;
 };
 IShader *Renderer::loadShader(const std::string &name,
                               const std::string &asset) {

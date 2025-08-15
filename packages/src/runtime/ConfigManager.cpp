@@ -1,8 +1,8 @@
 #include "runtime/ConfigManager.hpp"
-#include "core/File.hpp"
 #include "core/Object.hpp"
 #include "reflection/Variable.hpp"
 #include "serialization/json.hpp"
+#include <SDL3/SDL_iostream.h>
 #include <filesystem>
 #include <string>
 #include <unordered_map>
@@ -20,9 +20,14 @@ resolveConfig(core::Object *parent,
       resolveConfig(parent, configs, parts, item);
     }
   } else {
-    core::File file(current.string());
-    auto buf = file.read();
-    auto variable = serialization::Json::parse((const char *)buf->getData());
+    size_t size = 0;
+    void *data = SDL_LoadFile(current.string().c_str(), &size);
+    if (!data) {
+      return;
+    }
+    std::string str((const char *)data, size);
+    SDL_free(data);
+    auto variable = serialization::Json::parse(str.c_str());
     std::string name = "";
     for (auto &item : parts) {
       name += item + ".";

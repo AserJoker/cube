@@ -1,8 +1,9 @@
 #include "runtime/AssetManager.hpp"
-#include "core/File.hpp"
+#include "core/Buffer.hpp"
 #include "core/Object.hpp"
 #include "core/Registry.hpp"
 #include "runtime/IAssetTransformer.hpp"
+#include <SDL3/SDL_iostream.h>
 #include <cctype>
 #include <filesystem>
 #include <mutex>
@@ -143,9 +144,13 @@ void AssetManager::load(const std::string &name) {
       if (node->path.empty()) {
         return;
       }
-      core::File file;
-      file.open(node->path);
-      core::Object *asset = file.read();
+      core::Object *asset = nullptr;
+      size_t size = 0;
+      void *data = SDL_LoadFile(node->path.c_str(), &size);
+      if (data) {
+        asset = create<core::Buffer>(size, data);
+        SDL_free(data);
+      }
       if (asset && _types.contains(node->type)) {
         for (auto &transformer : _types[node->type].transformers) {
           auto trans =
