@@ -1,0 +1,10 @@
+.cache
+.vscode
+build
+*.dll
+*.exe
+*.so
+*.pdb
+*.log
+*.log.*
+cube
