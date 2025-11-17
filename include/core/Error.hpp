@@ -1,6 +1,7 @@
 #pragma once
 #include <format>
 #include <iostream>
+#include <ostream>
 #include <stacktrace>
 #include <stdexcept>
 #include <utility>
@@ -15,10 +16,10 @@ public:
   Error(std::format_string<Types...> fmt, Types &&...args)
       : std::runtime_error(std::format(fmt, std::forward<Types>(args)...)),
         _trace(std::stacktrace::current(1)) {}
-  void printTrace() {
+  void printTrace(std::ostream &out = std::cout) {
     for (auto &frame : _trace) {
-      std::cout << "  " << frame.description() << "[" << frame.source_file()
-                << ":" << frame.source_line() << "]" << std::endl;
+      out << "  " << frame.description() << "[" << frame.source_file() << ":"
+          << frame.source_line() << "]" << std::endl;
     }
   }
 };

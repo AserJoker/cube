@@ -1,6 +1,5 @@
 #include "runtime/Application.hpp"
 #include "core/Error.hpp"
-#include "core/Value.hpp"
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -34,17 +33,9 @@ auto Application::run(int argc, char **argv) -> int {
   }
   _asset->addDomain(_appname,
                     std::filesystem::path(argv[0]).parent_path().string());
-  _locale->addLanguage("en_US", "English (US)");
-  _locale->addLanguageSource("en_US", _appname + ":locales/en_US.lang");
-  _locale->setLang("en_US");
-  auto cfg = _config->load("cube", "demo.json");
-  if (cfg.getType() == core::Value::Type::Null) {
-    cfg.setObject();
-    cfg.setField("lang", core::Value::createString("en_US"));
-  }
-  _config->save("cube", "demo.json", cfg);
   _isRunning = true;
-  _asset->save("cube:data/texture/aaa.tex", nullptr);
+  _logger->log("Application start with {}:{}", _appname, _version);
+
   while (_isRunning) {
     exit();
   }

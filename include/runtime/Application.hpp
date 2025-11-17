@@ -1,11 +1,13 @@
 #pragma once
 #include "Locale.hpp"
+#include "core/Logger.hpp"
 #include "core/Object.hpp"
-#include "runtime/Config.hpp"
 #include "runtime/Asset.hpp"
+#include "runtime/Config.hpp"
 #include <memory>
 #include <string>
 #include <vector>
+
 namespace cube::runtime {
 class Application : public core::Object {
 private:
@@ -18,6 +20,7 @@ private:
   std::unique_ptr<Locale> _locale = std::make_unique<Locale>();
   std::unique_ptr<Asset> _asset = std::make_unique<Asset>();
   std::unique_ptr<Config> _config = std::make_unique<Config>();
+  std::unique_ptr<core::Logger> _logger = std::make_unique<core::Logger>();
   std::vector<std::string> _arguments;
 
 private:
