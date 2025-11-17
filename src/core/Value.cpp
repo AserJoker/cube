@@ -10,6 +10,20 @@ auto Value::createNull() -> Value {
   v._node = std::make_shared<NullNode>();
   return v;
 }
+Value::Value(const Value &another) { _node = another._node; }
+Value::Value(Value &&another) {
+  _node = another._node;
+  another.setNull();
+}
+Value &Value::operator=(const Value &another) {
+  _node = another._node;
+  return *this;
+}
+Value &Value::operator=(Value &&another) {
+  _node = another._node;
+  another.setNull();
+  return *this;
+}
 
 auto Value::createBoolean(bool v) -> Value {
   Value val;

@@ -1,6 +1,11 @@
 #include "runtime/Application.hpp"
+#include "core/Error.hpp"
+#include "core/Value.hpp"
 #include <filesystem>
+#include <iostream>
+#include <stdexcept>
 #include <string>
+
 using namespace cube;
 using namespace cube::runtime;
 
@@ -27,14 +32,19 @@ auto Application::run(int argc, char **argv) -> int {
   for (int idx = 0; idx < argc; idx++) {
     _arguments.push_back(std::string(argv[idx]));
   }
-  _loader->addDomain(_appname,
-                     std::filesystem::path(argv[0]).parent_path().string());
+  _asset->addDomain(_appname,
+                    std::filesystem::path(argv[0]).parent_path().string());
   _locale->addLanguage("en_US", "English (US)");
   _locale->addLanguageSource("en_US", _appname + ":locales/en_US.lang");
   _locale->setLang("en_US");
-  auto cfg = _config->load("cube", "engine.json");
+  auto cfg = _config->load("cube", "demo.json");
+  if (cfg.getType() == core::Value::Type::Null) {
+    cfg.setObject();
+    cfg.setField("lang", core::Value::createString("en_US"));
+  }
   _config->save("cube", "demo.json", cfg);
   _isRunning = true;
+  _asset->save("cube:data/texture/aaa.tex", nullptr);
   while (_isRunning) {
     exit();
   }
@@ -50,14 +60,25 @@ auto Application::getLocale() -> Locale & { return *_locale; }
 
 auto Application::getLocale() const -> const Locale & { return *_locale; }
 
-auto Application::getLoader() -> Loader & { return *_loader; }
+auto Application::getAsset() -> Asset & { return *_asset; }
 
-auto Application::getLoader() const -> const Loader & { return *_loader; }
+auto Application::getAsset() const -> const Asset & { return *_asset; }
 
 auto Application::getArguments() const -> const std::vector<std::string> & {
   return _arguments;
 }
 
 auto main(int argc, char **argv) -> int {
-  return Application::getInstance().run(argc, argv);
+  try {
+    return Application::getInstance().run(argc, argv);
+  } catch (core::Error &e) {
+    std::cerr << e.what() << std::endl;
+    std::cerr << "at" << std::endl;
+    e.printTrace();
+  } catch (std::runtime_error &e) {
+    std::cerr << e.what() << std::endl;
+  } catch (...) {
+    std::cerr << "unknown error" << std::endl;
+  }
+  return -1;
 }

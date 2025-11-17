@@ -10,9 +10,9 @@ auto Locale::setLang(const std::string &lang) -> bool {
   _language = lang;
   _locales.clear();
   auto &app = Application::getInstance();
-  auto &loader = app.getLoader();
+  auto &asset = app.getAsset();
   for (const auto &source : _languages.at(lang)) {
-    auto buffer = loader.load(source);
+    auto buffer = asset.load(source);
     if (!buffer) {
       continue;
     }

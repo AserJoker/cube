@@ -2,7 +2,7 @@
 #include "Locale.hpp"
 #include "core/Object.hpp"
 #include "runtime/Config.hpp"
-#include "runtime/Loader.hpp"
+#include "runtime/Asset.hpp"
 #include <memory>
 #include <string>
 #include <vector>
@@ -16,7 +16,7 @@ private:
   bool _isRunning = false;
   int _exitCode = 0;
   std::unique_ptr<Locale> _locale = std::make_unique<Locale>();
-  std::unique_ptr<Loader> _loader = std::make_unique<Loader>();
+  std::unique_ptr<Asset> _asset = std::make_unique<Asset>();
   std::unique_ptr<Config> _config = std::make_unique<Config>();
   std::vector<std::string> _arguments;
 
@@ -36,8 +36,8 @@ public:
   auto exit(int exitCode = 0) -> void;
   auto getLocale() -> Locale &;
   auto getLocale() const -> const Locale &;
-  auto getLoader() -> Loader &;
-  auto getLoader() const -> const Loader &;
+  auto getAsset() -> Asset &;
+  auto getAsset() const -> const Asset &;
   auto getArguments() const -> const std::vector<std::string> &;
 };
 } // namespace cube::runtime

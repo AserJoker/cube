@@ -1,11 +1,13 @@
-#include "runtime/Loader.hpp"
+#include "runtime/Asset.hpp"
+#include "core/Error.hpp"
+#include <cstdio>
 #include <filesystem>
 #include <string>
 #include <vector>
 using namespace cube;
 using namespace cube::runtime;
 
-auto Loader::addDomain(const std::string &name, const std::string &path)
+auto Asset::addDomain(const std::string &name, const std::string &path)
     -> bool {
   std::vector<std::string> parts;
   std::string part;
@@ -49,7 +51,7 @@ auto Loader::addDomain(const std::string &name, const std::string &path)
   return true;
 }
 
-auto Loader::resolvePath(const std::string &fullpath) const -> std::string {
+auto Asset::resolvePath(const std::string &fullpath) const -> std::string {
   auto pos = fullpath.find(":");
   auto domain = fullpath.substr(0, pos);
   auto path = fullpath.substr(pos + 1);
@@ -101,15 +103,20 @@ auto Loader::resolvePath(const std::string &fullpath) const -> std::string {
   return path;
 }
 
-auto Loader::load(const std::string &fullpath) const
+auto Asset::load(const std::string &fullpath) const
     -> std::shared_ptr<core::Buffer> {
   auto path = resolvePath(fullpath);
   if (path.empty()) {
-    return nullptr;
+    throw core::Error("Invalid asset name: {}", fullpath);
   }
+  return loadFile(path);
+}
+
+auto Asset::loadFile(const std::string &path) const
+    -> std::shared_ptr<core::Buffer> {
   FILE *file = fopen(path.c_str(), "rb");
   if (!file) {
-    return nullptr;
+    throw core::Error("Failed to open file: {}", path);
   }
   fseek(file, 0, SEEK_END);
   size_t size = ftell(file);
@@ -118,4 +125,24 @@ auto Loader::load(const std::string &fullpath) const
   fread(const_cast<void *>(buffer->getData()), 1, size, file);
   fclose(file);
   return buffer;
+}
+auto Asset::save(const std::string &fullpath,
+                 const std::shared_ptr<core::Buffer> &buffer) const -> bool {
+  auto path = resolvePath(fullpath);
+  if (path.empty()) {
+    throw core::Error("Invalid asset name: {}", fullpath);
+  }
+  auto parentDir = std::filesystem::path(path).parent_path();
+  if (!std::filesystem::exists(parentDir)) {
+    std::filesystem::create_directories(parentDir);
+  }
+  FILE *fp = fopen(path.c_str(), "w");
+  if (!fp) {
+    throw core::Error("Invalid asset name: {}", fullpath);
+  }
+  if (buffer) {
+    fwrite(buffer->getData(), 1, buffer->getSize(), fp);
+  }
+  fclose(fp);
+  return true;
 }

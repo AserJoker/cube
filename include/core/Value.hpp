@@ -48,6 +48,10 @@ private:
 public:
   Value();
   ~Value() override;
+  Value(const Value &another);
+  Value(Value &&another);
+  Value &operator=(const Value &another);
+  Value &operator=(Value &&another);
   static auto createNull() -> Value;
   static auto createBoolean(bool v) -> Value;
   static auto createInteger(int64_t v) -> Value;
