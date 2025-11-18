@@ -3,6 +3,7 @@
 #include "core/Error.hpp"
 #include "core/Json.hpp"
 #include "core/Value.hpp"
+#include "core/Version.hpp"
 #include "runtime/Application.hpp"
 #include <cjson/cJSON.h>
 #include <memory>
@@ -33,26 +34,22 @@ Save::Save(const std::shared_ptr<core::Buffer> &buffer,
         filename);
   }
   auto obj = value.asObject();
-  if (obj->contains("name")) {
-    auto nameVal = obj->at("name").asString();
-    if (nameVal) {
-      _name = nameVal.value();
-    } else {
-      throw core::Error(
-          "Invalid load manifest {} : invalid format, field 'name' is required",
-          filename);
-    }
+  if (obj->contains("name") ||
+      obj->at("name").getType() != core::Value::Type::String) {
+    throw core::Error(
+        "Invalid load manifest {} : invalid format, field 'name' is required",
+        filename);
   }
-  if (obj->contains("version")) {
-    auto versionVal = obj->at("version").asString();
-    if (versionVal) {
-      _version = versionVal.value();
-    } else {
-      throw core::Error("Invalid load manifest {} : invalid format, field "
-                        "'version' is required",
-                        filename);
-    }
+  _name = obj->at("name").asString().value();
+  if (!obj->contains("version") ||
+      obj->at("version").getType() != core::Value::Type::String) {
+
+    throw core::Error("Invalid load manifest {} : invalid format, field "
+                      "'version' is required",
+                      filename);
   }
+  auto versionVal = obj->at("version").asString();
+  _version = core::Version::parse(versionVal.value()).value();
   if (obj->contains("mods")) {
     auto modsVal = obj->at("mods").asArray();
     if (modsVal) {
@@ -66,10 +63,6 @@ Save::Save(const std::shared_ptr<core::Buffer> &buffer,
                             filename);
         }
       }
-    } else {
-      throw core::Error("Invalid load manifest {} : invalid format, field "
-                        "'mods' must be string array",
-                        filename);
     }
   }
   if (obj->contains("config")) {
@@ -86,7 +79,7 @@ Save::Save(const std::string &name) : Object(), _name(name) {
 Save::~Save() { saveManifest(); }
 
 auto Save::getName() const -> const std::string & { return _name; }
-auto Save::getVersion() const -> const std::string & { return _version; }
+auto Save::getVersion() const -> const core::Version & { return _version; }
 auto Save::getMods() const -> const std::vector<std::string> & { return _mods; }
 auto Save::getConfig() const -> const core::Value & { return _config; }
 auto Save::saveManifest() const -> bool {
@@ -97,7 +90,8 @@ auto Save::saveManifest() const -> bool {
   auto fullname = builder.str();
   core::Value manifest = core::Value::createObject();
   manifest.setField("name", core::Value::createString(_name));
-  manifest.setField("version", core::Value::createString(_version));
+  manifest.setField(
+      "version", core::Value::createString(core::Version::serialize(_version)));
   core::Value mods = core::Value::createArray();
   for (auto &mod : _mods) {
     mods.appendElement(core::Value::createString(mod));

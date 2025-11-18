@@ -1,22 +1,26 @@
 #pragma once
 #include "core/Object.hpp"
+#include "core/Version.hpp"
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
 namespace cube::runtime {
 class ModLoader : public core::Object {
 private:
   struct Manifest {
+    std::string path;
     std::string name;
-    std::string version;
+    core::Version version;
+    core::Version gameVersion;
     std::unordered_map<std::string, std::string> locales;
-    std::vector<std::string> dependencies;
+    std::unordered_map<std::string, std::string> languages;
+    std::unordered_map<std::string, std::string> dependencies;
     std::vector<std::string> children;
     std::string script;
-    bool isLoaded = false;
     bool isEnable = false;
-    std::optional<std::string> error = std::nullopt;
+    bool isLoaded = false;
   };
 
   std::unordered_map<std::string, Manifest> _mods;
@@ -32,7 +36,7 @@ public:
   auto loadAllMods() -> void;
   auto getManifest(const std::string &modName) -> std::optional<Manifest>;
   auto getModList() -> std::vector<std::string>;
-  auto enableMod(const std::string &modName) -> bool;
-  auto disableMod(const std::string &modName) -> bool;
+  auto enableMod(const std::string &modName) -> void;
+  auto disableMod(const std::string &modName) -> void;
 };
 } // namespace cube::runtime

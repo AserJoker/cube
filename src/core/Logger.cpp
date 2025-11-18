@@ -17,7 +17,7 @@ Logger::Logger(const std::string &filepath) {
       auto zoned_time = std::chrono::zoned_time(zone, now);
       std::filesystem::rename(
           filepath,
-          filepath + "." + std::format("{:%Y_%m_%d_%H_%M_%S}", zoned_time));
+          filepath + "." + std::format("{:%Y_%m_%d_%H_%M_%OS}", zoned_time));
     }
     _out = std::ofstream(filepath);
     if (!_out->is_open()) {
@@ -39,7 +39,7 @@ auto Logger::write(const Level &level, const std::string &message) -> void {
   auto zone = std::chrono::current_zone();
   auto now = std::chrono::system_clock::now();
   auto zoned_time = std::chrono::zoned_time(zone, now);
-  out << std::format("{:%Y-%m-%d %H:%M:%S %Z}", zoned_time) << " ";
+  out << std::format("{:%Y-%m-%d %H:%M:%OS %Z}", zoned_time) << " ";
   switch (level) {
   case Level::DEBUG:
     out << "[DEBUG]";

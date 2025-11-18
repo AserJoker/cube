@@ -2,6 +2,7 @@
 #include "core/Buffer.hpp"
 #include "core/Object.hpp"
 #include "core/Value.hpp"
+#include "core/Version.hpp"
 #include <memory>
 #include <string>
 #include <vector>
@@ -9,7 +10,7 @@ namespace cube::runtime {
 class Save : public core::Object {
 private:
   std::string _name;
-  std::string _version;
+  core::Version _version;
   std::vector<std::string> _mods;
   core::Value _config;
 
@@ -19,7 +20,7 @@ public:
   Save(const std::string &name);
   ~Save() override;
   auto getName() const -> const std::string &;
-  auto getVersion() const -> const std::string &;
+  auto getVersion() const -> const core::Version &;
   auto getMods() const -> const std::vector<std::string> &;
   auto getConfig() const -> const core::Value &;
   auto saveManifest() const -> bool;

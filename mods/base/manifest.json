@@ -1,0 +1,11 @@
+{
+    "name": "base",
+    "version": "0.1.0",
+    "gameVersion": "0.1.0",
+    "languages": {
+        "zh_CN": "简体中文"
+    },
+    "locales": {
+        "zh_CN": "locale/zh_CN.lang"
+    }
+}

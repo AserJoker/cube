@@ -29,34 +29,34 @@ public:
   template <class... Type>
   constexpr inline void info(std::format_string<Type...> fmt, Type &&...args) {
     if (_mask <= Level::INFO) {
-      write(Level::DEBUG, std::format(fmt, std::forward<Type>(args)...));
+      write(Level::INFO, std::format(fmt, std::forward<Type>(args)...));
     }
   }
   template <class... Type>
   constexpr inline void log(std::format_string<Type...> fmt, Type &&...args) {
     if (_mask <= Level::LOG) {
-      write(Level::DEBUG, std::format(fmt, std::forward<Type>(args)...));
+      write(Level::LOG, std::format(fmt, std::forward<Type>(args)...));
     }
   }
 
   template <class... Type>
   constexpr inline void warn(std::format_string<Type...> fmt, Type &&...args) {
     if (_mask <= Level::WARN) {
-      write(Level::DEBUG, std::format(fmt, std::forward<Type>(args)...));
+      write(Level::WARN, std::format(fmt, std::forward<Type>(args)...));
     }
   }
 
   template <class... Type>
   constexpr inline void error(std::format_string<Type...> fmt, Type &&...args) {
     if (_mask <= Level::ERROR) {
-      write(Level::DEBUG, std::format(fmt, std::forward<Type>(args)...));
+      write(Level::ERROR, std::format(fmt, std::forward<Type>(args)...));
     }
   }
 
   template <class... Type>
   constexpr inline void panic(std::format_string<Type...> fmt, Type &&...args) {
     if (_mask <= Level::ERROR) {
-      write(Level::DEBUG, std::format(fmt, std::forward<Type>(args)...));
+      write(Level::ERROR, std::format(fmt, std::forward<Type>(args)...));
     }
   }
 };

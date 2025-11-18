@@ -1,0 +1,8 @@
+{
+    "name": "i18n",
+    "version": "0.1.0",
+    "gameVersion": "0.1.0",
+    "dependencies": {
+        "base": "0.1.0"
+    }
+}

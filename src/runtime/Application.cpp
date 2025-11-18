@@ -1,9 +1,15 @@
 #include "runtime/Application.hpp"
 #include "core/Error.hpp"
+#include "core/Version.hpp"
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <locale.h>
+#endif
 
 using namespace cube;
 using namespace cube::runtime;
@@ -11,14 +17,20 @@ using namespace cube::runtime;
 auto Application::setApplicationInfo(const std::string &appname,
                                      const std::string &appversion) -> void {
   this->_appname = appname;
-  this->_version = appversion;
+  auto version = core::Version::parse(appversion);
+  if (!version) {
+    _logger->error(
+        "Failed to set application version '{}', invalid version format",
+        appversion);
+  }
+  this->_version = version.value();
 }
 
 auto Application::getApplicationName() const -> const std::string & {
   return _appname;
 }
 
-auto Application::getApplicationVersion() const -> const std::string & {
+auto Application::getApplicationVersion() const -> const core::Version & {
   return _version;
 }
 
@@ -33,9 +45,15 @@ auto Application::run(int argc, char **argv) -> int {
   }
   _asset->addDomain(_appname,
                     std::filesystem::path(argv[0]).parent_path().string());
+  _locale->addLanguage("en_US", "English (US)");
+  _locale->addLanguageSource("en_US", _appname + ":locale/en_US.lang");
+  _modLoader->scanModList();
+  _modLoader->enableMod("i18n");
+  _modLoader->loadAllMods();
+  _locale->setLang("zh_CN");
+  auto str = _locale->i18n("system.application.title");
+  _logger->info("{} started", str);
   _isRunning = true;
-  _logger->log("Application start with {}:{}", _appname, _version);
-
   while (_isRunning) {
     exit();
   }
@@ -49,17 +67,20 @@ auto Application::exit(int exitCode) -> void {
 
 auto Application::getLocale() -> Locale & { return *_locale; }
 
-auto Application::getLocale() const -> const Locale & { return *_locale; }
-
 auto Application::getAsset() -> Asset & { return *_asset; }
 
-auto Application::getAsset() const -> const Asset & { return *_asset; }
+auto Application::getLogger() -> core::Logger & { return *_logger; }
 
 auto Application::getArguments() const -> const std::vector<std::string> & {
   return _arguments;
 }
 
 auto main(int argc, char **argv) -> int {
+#ifdef _WIN32
+  SetConsoleOutputCP(CP_UTF8);
+#else
+  setlocale(LC_ALL, "");
+#endif
   try {
     return Application::getInstance().run(argc, argv);
   } catch (core::Error &e) {

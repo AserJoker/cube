@@ -1,5 +1,5 @@
 #include "runtime/Asset.hpp"
-#include "core/Error.hpp"
+#include "runtime/Application.hpp"
 #include <cstdio>
 #include <filesystem>
 #include <string>
@@ -106,17 +106,21 @@ auto Asset::resolvePath(const std::string &fullpath) const -> std::string {
 auto Asset::load(const std::string &fullpath) const
     -> std::shared_ptr<core::Buffer> {
   auto path = resolvePath(fullpath);
+  auto &logger = Application::getInstance().getLogger();
   if (path.empty()) {
-    throw core::Error("Invalid asset name: {}", fullpath);
+    logger.error("Failed to resolve asset: '{}'", fullpath);
+    return nullptr;
   }
   return loadFile(path);
 }
 
 auto Asset::loadFile(const std::string &path) const
     -> std::shared_ptr<core::Buffer> {
+  auto &logger = Application::getInstance().getLogger();
   FILE *file = fopen(path.c_str(), "rb");
   if (!file) {
-    throw core::Error("Failed to open file: {}", path);
+    logger.error("Failed to open file: {}", path);
+    return nullptr;
   }
   fseek(file, 0, SEEK_END);
   size_t size = ftell(file);
@@ -128,9 +132,11 @@ auto Asset::loadFile(const std::string &path) const
 }
 auto Asset::save(const std::string &fullpath,
                  const std::shared_ptr<core::Buffer> &buffer) const -> bool {
+  auto &logger = Application::getInstance().getLogger();
   auto path = resolvePath(fullpath);
   if (path.empty()) {
-    throw core::Error("Invalid asset name: {}", fullpath);
+    logger.error("Failed to resolve asset: '{}'", fullpath);
+    return false;
   }
   auto parentDir = std::filesystem::path(path).parent_path();
   if (!std::filesystem::exists(parentDir)) {
@@ -138,7 +144,8 @@ auto Asset::save(const std::string &fullpath,
   }
   FILE *fp = fopen(path.c_str(), "w");
   if (!fp) {
-    throw core::Error("Invalid asset name: {}", fullpath);
+    logger.error("Invalid asset name: {}", fullpath);
+    return false;
   }
   if (buffer) {
     fwrite(buffer->getData(), 1, buffer->getSize(), fp);
