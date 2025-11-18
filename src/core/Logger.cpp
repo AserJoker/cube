@@ -11,6 +11,10 @@ using namespace cube::core;
 
 Logger::Logger(const std::string &filepath) {
   if (!filepath.empty()) {
+    auto parentDir = std::filesystem::path(filepath).parent_path();
+    if (!std::filesystem::exists(parentDir)) {
+      std::filesystem::create_directories(parentDir);
+    }
     if (std::filesystem::exists(filepath)) {
       auto zone = std::chrono::current_zone();
       auto now = std::chrono::system_clock::now();

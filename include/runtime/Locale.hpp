@@ -22,5 +22,7 @@ public:
   auto getLang() const -> const std::string &;
   auto i18n(const std::string &key, const std::string &def = "",
             const Parameters &params = {}) const -> std::string;
+  auto getLanguages() const
+      -> const std::unordered_map<std::string, std::string> &;
 };
 } // namespace cube::runtime

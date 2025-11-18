@@ -9,23 +9,34 @@
 using namespace cube;
 using namespace cube::runtime;
 
-auto Config::load(const std::string &domain, const std::string &filename) const
+auto Config::load(const std::string &domain, const std::string &filename)
     -> core::Value {
   auto &app = Application::getInstance();
+  auto fullname = app.getName() + ":config/" + domain + "/" + filename;
+  if (_configs.contains(fullname)) {
+    return _configs.at(fullname);
+  }
   auto &asset = app.getAsset();
-  auto fullname =
-      app.getApplicationName() + ":config/" + domain + "/" + filename;
-  return asset.loadAs<core::Json>(fullname)->value;
+  auto value = asset.loadAs<core::Json>(fullname);
+  if (!value) {
+    _configs[fullname] = core::Value::createObject();
+  } else {
+    _configs[fullname] = value->value;
+  }
+  return _configs[fullname];
 }
 
-auto Config::save(const std::string &domain, const std::string &filename,
-                  const core::Value &value) const -> bool {
+auto Config::save(const std::string &domain, const std::string &filename) const
+    -> bool {
   auto &app = Application::getInstance();
+  auto fullname = app.getName() + ":config/" + domain + "/" + filename;
+  if (!_configs.contains(fullname)) {
+    return false;
+  }
+  auto &value = _configs.at(fullname);
   auto &asset = app.getAsset();
   auto node = core::Value::serializeJSON(value);
   char *content = cJSON_Print(node);
-  auto fullname =
-      app.getApplicationName() + ":config/" + domain + "/" + filename;
   cJSON_Delete(node);
   auto buffer = std::make_shared<core::Buffer>(std::strlen(content), content);
   free(content);

@@ -14,8 +14,7 @@ using namespace cube::runtime;
 auto Save::create(const std::string &name) -> std::shared_ptr<Save> {
   auto &app = Application::getInstance();
   auto &asset = app.getAsset();
-  auto fullname =
-      app.getApplicationName() + ":saves/" + name + "/manifest.json";
+  auto fullname = app.getName() + ":saves/" + name + "/manifest.json";
   auto save = asset.loadAs<Save>(fullname);
   if (!save) {
     save = std::make_shared<Save>(name);
@@ -72,7 +71,7 @@ Save::Save(const std::shared_ptr<core::Buffer> &buffer,
 
 Save::Save(const std::string &name) : Object(), _name(name) {
   auto &app = Application::getInstance();
-  _version = app.getApplicationVersion();
+  _version = app.getVersion();
   _config.setObject();
 }
 
@@ -86,7 +85,7 @@ auto Save::saveManifest() const -> bool {
   auto &app = Application::getInstance();
   auto &asset = app.getAsset();
   std::stringstream builder;
-  builder << app.getApplicationName() << ":saves/" << _name << "/manifest.json";
+  builder << app.getName() << ":saves/" << _name << "/manifest.json";
   auto fullname = builder.str();
   core::Value manifest = core::Value::createObject();
   manifest.setField("name", core::Value::createString(_name));
@@ -112,7 +111,7 @@ auto Save::save(const std::string &filename,
   auto &app = Application::getInstance();
   auto &asset = app.getAsset();
   std::stringstream builder;
-  builder << app.getApplicationName() << ":saves/" << _name << "/" << filename;
+  builder << app.getName() << ":saves/" << _name << "/" << filename;
   return asset.save(builder.str(), buffer);
 }
 auto Save::load(const std::string &filename) -> std::shared_ptr<core::Buffer> {
@@ -122,6 +121,6 @@ auto Save::load(const std::string &filename) -> std::shared_ptr<core::Buffer> {
   auto &app = Application::getInstance();
   auto &asset = app.getAsset();
   std::stringstream builder;
-  builder << app.getApplicationName() << ":saves/" << _name << "/" << filename;
+  builder << app.getName() << ":saves/" << _name << "/" << filename;
   return asset.load(builder.str());
 }

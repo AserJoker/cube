@@ -15,7 +15,7 @@ ModLoader::~ModLoader() {}
 auto ModLoader::scanModList() -> void {
   auto &app = Application::getInstance();
   auto &asset = app.getAsset();
-  auto moddir = app.getApplicationName() + ":mods/";
+  auto moddir = app.getName() + ":mods/";
   auto path = asset.resolvePath(moddir);
   auto &logger = app.getLogger();
   if (!std::filesystem::exists(path)) {
@@ -65,6 +65,7 @@ auto ModLoader::scanModList() -> void {
                      manifestPath, version);
         continue;
       }
+      manifest.version = parsedVersion.value();
       if (!manifestMap->contains("gameVersion") ||
           manifestMap->at("version").getType() != core::Value::Type::String) {
         logger.error("Invalid mod manifest {} : invalid format, field "
@@ -213,7 +214,7 @@ auto ModLoader::enableMod(const std::string &modName) -> void {
   if (mod.isEnable) {
     return;
   }
-  if (mod.gameVersion > app.getApplicationVersion()) {
+  if (mod.gameVersion > app.getVersion()) {
     throw core::Error("require game version '{}'", mod.name,
                       core::Version::serialize(mod.gameVersion));
   }
@@ -222,7 +223,7 @@ auto ModLoader::enableMod(const std::string &modName) -> void {
     if (!version) {
       throw core::Error("unknown dependence '{}@{}'", name, ver);
     }
-    if (!_mods.contains(name) || version > _mods.at(name).version) {
+    if (!_mods.contains(name) || version.value() > _mods.at(name).version) {
       throw core::Error("cannot find dependence '{}@{}' required by '{}'", name,
                         ver, mod.name);
     }

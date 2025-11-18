@@ -1,6 +1,7 @@
 #include "runtime/Application.hpp"
-#include "core/Error.hpp"
+#include "core/Value.hpp"
 #include "core/Version.hpp"
+#include <exception>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -26,11 +27,9 @@ auto Application::setApplicationInfo(const std::string &appname,
   this->_version = version.value();
 }
 
-auto Application::getApplicationName() const -> const std::string & {
-  return _appname;
-}
+auto Application::getName() const -> const std::string & { return _appname; }
 
-auto Application::getApplicationVersion() const -> const core::Version & {
+auto Application::getVersion() const -> const core::Version & {
   return _version;
 }
 
@@ -38,21 +37,63 @@ auto Application::getInstance() -> Application & {
   static Application instance;
   return instance;
 }
+auto Application::resolveConfig() -> void {
+  auto cfg = _config->load(_appname, "options.json");
+  if (cfg.getType() != core::Value::Type::Object) {
+    cfg.setObject();
+  }
+  auto enableMods = cfg.getField("enableMods");
+  if (!enableMods || enableMods->getType() != core::Value::Type::Array) {
+    cfg.setField("enableMods", core::Value::createArray());
+  } else {
+    auto resolved = core::Value::createArray();
+    auto mods = enableMods->asArray().value();
+    for (auto &mod : mods) {
+      if (mod.getType() == core::Value::Type::String) {
+        auto modstr = mod.asString().value();
+        try {
+          _modLoader->enableMod(modstr);
+          resolved.appendElement(core::Value::createString(modstr));
+        } catch (std::exception &e) {
+          _logger->error("Failed to enable mod '{}': {}", modstr, e.what());
+        }
+      }
+    }
+    cfg.setField("enableMods", resolved);
+  }
+  try {
+    _modLoader->loadAllMods();
+  } catch (std::exception &e) {
+    _logger->error("{}", e.what());
+    cfg.setField("enableMods", core::Value::createArray());
+  }
+  auto language = cfg.getField("language");
+  if (!language || language->getType() != core::Value::Type::String) {
+    cfg.setField("language", core::Value::createString("en_US"));
+    _locale->setLang("en_US");
+  } else {
+    if (!_locale->setLang(language->asString().value())) {
+      _locale->setLang("en_US");
+      cfg.setField("language", core::Value::createString("en_US"));
+    }
+  }
+  _config->save(_appname, "options.json");
+}
+
+auto Application::prepareLocale() -> void {
+  _locale->addLanguage("en_US", "English (US)");
+  _locale->addLanguageSource("en_US", _appname + ":locale/en_US.lang");
+}
 
 auto Application::run(int argc, char **argv) -> int {
   for (int idx = 0; idx < argc; idx++) {
     _arguments.push_back(std::string(argv[idx]));
   }
-  _asset->addDomain(_appname,
-                    std::filesystem::path(argv[0]).parent_path().string());
-  _locale->addLanguage("en_US", "English (US)");
-  _locale->addLanguageSource("en_US", _appname + ":locale/en_US.lang");
+  auto cwd = std::filesystem::path(argv[0]).parent_path().string();
+  _asset->addDomain(_appname, cwd);
   _modLoader->scanModList();
-  _modLoader->enableMod("i18n");
-  _modLoader->loadAllMods();
-  _locale->setLang("zh_CN");
-  auto str = _locale->i18n("system.application.title");
-  _logger->info("{} started", str);
+  prepareLocale();
+  resolveConfig();
   _isRunning = true;
   while (_isRunning) {
     exit();
@@ -83,14 +124,8 @@ auto main(int argc, char **argv) -> int {
 #endif
   try {
     return Application::getInstance().run(argc, argv);
-  } catch (core::Error &e) {
-    std::cerr << e.what() << std::endl;
-    std::cerr << "at" << std::endl;
-    e.printTrace();
   } catch (std::runtime_error &e) {
     std::cerr << e.what() << std::endl;
-  } catch (...) {
-    std::cerr << "unknown error" << std::endl;
   }
   return -1;
 }

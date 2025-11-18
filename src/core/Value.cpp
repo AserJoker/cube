@@ -361,10 +361,9 @@ auto Value::parseJSON(cJSON *node) -> Value {
     return Value::createString(node->valuestring);
   case cJSON_Array: {
     auto arr = Value::createArray();
-    size_t index = 0;
     cJSON *elem = node->child;
     while (elem) {
-      arr.setElement(index++, parseJSON(elem));
+      arr.appendElement(parseJSON(elem));
       elem = elem->next;
     }
     return arr;

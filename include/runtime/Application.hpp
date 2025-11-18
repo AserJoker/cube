@@ -33,11 +33,15 @@ private:
 public:
   static auto getInstance() -> Application &;
 
+private:
+  auto resolveConfig() -> void;
+  auto prepareLocale() -> void;
+
 public:
   auto setApplicationInfo(const std::string &appname,
                           const std::string &appversion) -> void;
-  auto getApplicationName() const -> const std::string &;
-  auto getApplicationVersion() const -> const core::Version &;
+  auto getName() const -> const std::string &;
+  auto getVersion() const -> const core::Version &;
   auto run(int argc, char **argv) -> int;
   auto exit(int exitCode = 0) -> void;
   auto getLocale() -> Locale &;

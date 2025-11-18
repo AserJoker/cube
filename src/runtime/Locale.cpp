@@ -80,3 +80,7 @@ auto Locale::i18n(const std::string &key, const std::string &def,
   }
   return result;
 }
+auto Locale::getLanguages() const
+    -> const std::unordered_map<std::string, std::string> & {
+  return _locales;
+}
