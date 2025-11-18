@@ -57,7 +57,7 @@ auto Logger::write(const Level &level, const std::string &message) -> void {
   case Level::WARN:
     out << "[WARN]";
     break;
-  case Level::ERROR:
+  case Level::ERR:
     out << "[ERROR]";
     break;
   case Level::PANIC:

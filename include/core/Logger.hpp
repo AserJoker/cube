@@ -8,7 +8,7 @@
 namespace cube::core {
 class Logger : public Object {
 public:
-  enum class Level { DEBUG, INFO, LOG, WARN, ERROR, PANIC };
+  enum class Level { DEBUG, INFO, LOG, WARN, ERR, PANIC };
 
 private:
   Level _mask = Level::INFO;
@@ -48,15 +48,15 @@ public:
 
   template <class... Type>
   constexpr inline void error(std::format_string<Type...> fmt, Type &&...args) {
-    if (_mask <= Level::ERROR) {
-      write(Level::ERROR, std::format(fmt, std::forward<Type>(args)...));
+    if (_mask <= Level::ERR) {
+      write(Level::ERR, std::format(fmt, std::forward<Type>(args)...));
     }
   }
 
   template <class... Type>
   constexpr inline void panic(std::format_string<Type...> fmt, Type &&...args) {
-    if (_mask <= Level::ERROR) {
-      write(Level::ERROR, std::format(fmt, std::forward<Type>(args)...));
+    if (_mask <= Level::PANIC) {
+      write(Level::PANIC, std::format(fmt, std::forward<Type>(args)...));
     }
   }
 };

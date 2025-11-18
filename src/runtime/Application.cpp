@@ -1,4 +1,5 @@
 #include "runtime/Application.hpp"
+#include "core/Logger.hpp"
 #include "core/Value.hpp"
 #include "core/Version.hpp"
 #include <exception>
@@ -75,6 +76,29 @@ auto Application::resolveConfig() -> void {
     if (!_locale->setLang(language->asString().value())) {
       _locale->setLang("en_US");
       cfg.setField("language", core::Value::createString("en_US"));
+    }
+  }
+  auto logLevel = cfg.getField("logLevel");
+  if (!logLevel || logLevel->getType() != core::Value::Type::String) {
+    cfg.setField("logLevel", core::Value::createString("info"));
+    _logger->setMask(core::Logger::Level::INFO);
+  } else {
+    auto level = logLevel.value().asString().value();
+    if (level == "debug") {
+      _logger->setMask(core::Logger::Level::DEBUG);
+    } else if (level == "info") {
+      _logger->setMask(core::Logger::Level::INFO);
+    } else if (level == "log") {
+      _logger->setMask(core::Logger::Level::LOG);
+    } else if (level == "warn") {
+      _logger->setMask(core::Logger::Level::WARN);
+    } else if (level == "error") {
+      _logger->setMask(core::Logger::Level::ERR);
+    } else if (level == "panic") {
+      _logger->setMask(core::Logger::Level::PANIC);
+    } else {
+      _logger->setMask(core::Logger::Level::INFO);
+      cfg.setField("logLevel", core::Value::createString("info"));
     }
   }
   _config->save(_appname, "options.json");
