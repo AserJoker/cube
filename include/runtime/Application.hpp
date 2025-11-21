@@ -18,7 +18,7 @@ class Application : public core::Object {
 private:
   std::string _appname = APP_NAME;
   core::Version _version =
-      core::Version::parse(APP_VERSION).value_or({0, 1, 0});
+      core::Version::parse(APP_VERSION).value_or(core::Version{0, 1, 0});
 
 private:
   bool _isRunning = false;
