@@ -171,9 +171,10 @@ auto Application::onMainLoop() -> void {
     } else if (event.type == SDL_EVENT_QUIT) {
       _isRunning = false;
     }
-  }
-  for (auto &[_, win] : _windows) {
-    win->onUpdate();
+  } else {
+    for (auto &[_, win] : _windows) {
+      win->onUpdate();
+    }
   }
 }
 
