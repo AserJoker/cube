@@ -1,4 +1,5 @@
 #include "runtime/Application.hpp"
+#include "core/Channel.hpp"
 #include "core/Error.hpp"
 #include "core/Logger.hpp"
 #include "core/Value.hpp"
@@ -155,6 +156,8 @@ auto Application::prepareLocale() -> void {
   _locale->addLanguage("en_US", "English (US)");
   _locale->addLanguageSource("en_US", _appname + ":locale/en_US.lang");
 }
+
+auto channel = std::make_unique<core::Channel<int, 3>>();
 
 auto Application::onMainLoop() -> void {
   SDL_Event event;
