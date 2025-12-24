@@ -1,11 +1,12 @@
 #include "runtime/Application.hpp"
-#include "core/Channel.hpp"
 #include "core/Error.hpp"
 #include "core/Logger.hpp"
 #include "core/Value.hpp"
 #include "core/Version.hpp"
-#include "runtime/MainWindow.hpp"
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_oldnames.h>
+#include <SDL3/SDL_video.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <exception>
 #include <filesystem>
@@ -145,40 +146,9 @@ auto Application::resolveConfig() -> void {
   _config->save(_appname, "options.json");
 }
 
-auto Application::createMainWindow() -> void {
-  std::unique_ptr<Window> win =
-      std::make_unique<MainWindow>(_appname, 1024, 768);
-  _mainWindowID = win->getID();
-  _windows[_mainWindowID].swap(win);
-}
-
 auto Application::prepareLocale() -> void {
   _locale->addLanguage("en_US", "English (US)");
   _locale->addLanguageSource("en_US", _appname + ":locale/en_US.lang");
-}
-
-auto channel = std::make_unique<core::Channel<int, 3>>();
-
-auto Application::onMainLoop() -> void {
-  SDL_Event event;
-  if (SDL_PollEvent(&event)) {
-    if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
-      if (event.window.windowID == _mainWindowID) {
-        SDL_QuitEvent event = {};
-        event.type = SDL_EVENT_QUIT;
-        event.timestamp = SDL_GetTicks();
-        SDL_PushEvent((SDL_Event *)&event);
-      } else {
-        _windows.erase(event.window.windowID);
-      }
-    } else if (event.type == SDL_EVENT_QUIT) {
-      _isRunning = false;
-    }
-  } else {
-    for (auto &[_, win] : _windows) {
-      win->onUpdate();
-    }
-  }
 }
 
 auto Application::run(int argc, char **argv) -> int {
@@ -199,11 +169,18 @@ auto Application::run(int argc, char **argv) -> int {
   if (!TTF_Init()) {
     throw core::Error("Failed to initialize sdl ttf: {}", SDL_GetError());
   }
-  createMainWindow();
+  SDL_Window *window = SDL_CreateWindow(_appname.c_str(), 1024, 768,
+                                        SDL_WINDOW_HIGH_PIXEL_DENSITY);
   _isRunning = true;
   while (_isRunning) {
-    onMainLoop();
+    SDL_Event event;
+    if (SDL_PollEvent(&event)) {
+      if (event.type == SDL_EVENT_QUIT) {
+        _isRunning = false;
+      }
+    }
   }
+  SDL_DestroyWindow(window);
   TTF_Quit();
   SDL_Quit();
   return _exitCode;
