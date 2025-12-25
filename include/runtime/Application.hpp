@@ -1,5 +1,6 @@
 #pragma once
 #include "Locale.hpp"
+#include "System.hpp"
 #include "core/Logger.hpp"
 #include "core/Object.hpp"
 #include "core/Version.hpp"
@@ -26,6 +27,7 @@ private:
   std::unique_ptr<Config> _config = std::make_unique<Config>();
   std::unique_ptr<core::Logger> _logger = std::make_unique<core::Logger>();
   std::unique_ptr<ModLoader> _modLoader = std::make_unique<ModLoader>();
+  std::unique_ptr<System> _system = nullptr;
   std::vector<std::string> _arguments;
 
 private:
@@ -34,8 +36,6 @@ private:
 
 public:
   static auto getInstance() -> Application &;
-  static auto logHook(core::Logger *logger, int category,
-                      SDL_LogPriority priority, const char *message) -> void;
 
 private:
   auto resolveConfig() -> void;
@@ -52,5 +52,6 @@ public:
   auto getAsset() -> Asset &;
   auto getLogger() -> core::Logger &;
   auto getArguments() const -> const std::vector<std::string> &;
+  auto getSystem() -> System &;
 };
 } // namespace cube::runtime

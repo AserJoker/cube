@@ -1,13 +1,14 @@
 #include "runtime/Application.hpp"
-#include "core/Error.hpp"
 #include "core/Logger.hpp"
 #include "core/Value.hpp"
 #include "core/Version.hpp"
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_events.h>
-#include <SDL3/SDL_oldnames.h>
-#include <SDL3/SDL_video.h>
-#include <SDL3_ttf/SDL_ttf.h>
+#include "runtime/Event.hpp"
+#include "runtime/System.hpp"
+#if RENDER_MODE == 1
+#include "runtime/System_SDL.hpp"
+#else
+#include "runtime/System_Terminal.hpp"
+#endif
 #include <exception>
 #include <filesystem>
 #include <memory>
@@ -46,32 +47,6 @@ auto Application::getInstance() -> Application & {
   return instance;
 }
 
-auto Application::logHook(core::Logger *logger, int category,
-                          SDL_LogPriority priority, const char *message)
-    -> void {
-  switch (priority) {
-  case SDL_LOG_PRIORITY_INVALID:
-  case SDL_LOG_PRIORITY_TRACE:
-  case SDL_LOG_PRIORITY_VERBOSE:
-  case SDL_LOG_PRIORITY_DEBUG:
-    logger->debug("{}", message);
-    break;
-  case SDL_LOG_PRIORITY_INFO:
-    logger->info("{}", message);
-    break;
-  case SDL_LOG_PRIORITY_WARN:
-    logger->warn("{}", message);
-    break;
-  case SDL_LOG_PRIORITY_ERROR:
-  case SDL_LOG_PRIORITY_CRITICAL:
-    logger->error("{}", message);
-    break;
-  case SDL_LOG_PRIORITY_COUNT:
-    logger->debug("{}", message);
-    break;
-  }
-}
-
 auto Application::resolveConfig() -> void {
   auto cfg = _config->load(_appname, "options.json");
   if (cfg.getType() != core::Value::Type::Object) {
@@ -96,24 +71,17 @@ auto Application::resolveConfig() -> void {
     auto level = logLevel.value().asString().value();
     if (level == "debug") {
       _logger->setMask(core::Logger::Level::DEBUG);
-      SDL_SetLogPriorities(SDL_LOG_PRIORITY_DEBUG);
     } else if (level == "info") {
-      SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
       _logger->setMask(core::Logger::Level::INFO);
     } else if (level == "log") {
-      SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
       _logger->setMask(core::Logger::Level::LOG);
     } else if (level == "warn") {
-      SDL_SetLogPriorities(SDL_LOG_PRIORITY_WARN);
       _logger->setMask(core::Logger::Level::WARN);
     } else if (level == "error") {
-      SDL_SetLogPriorities(SDL_LOG_PRIORITY_ERROR);
       _logger->setMask(core::Logger::Level::ERR);
     } else if (level == "panic") {
-      SDL_SetLogPriorities(SDL_LOG_PRIORITY_CRITICAL);
       _logger->setMask(core::Logger::Level::PANIC);
     } else {
-      SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
       _logger->setMask(core::Logger::Level::INFO);
       cfg.setField("logLevel", core::Value::createString("info"));
     }
@@ -160,29 +128,21 @@ auto Application::run(int argc, char **argv) -> int {
   _modLoader->scanModList();
   prepareLocale();
   resolveConfig();
-  SDL_SetAppMetadata(_appname.c_str(),
-                     core::Version::serialize(_version).c_str(), NULL);
-  SDL_SetLogOutputFunction((SDL_LogOutputFunction)logHook, _logger.get());
-  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS)) {
-    throw core::Error("Failed to initialize sdl: {}", SDL_GetError());
-  }
-  if (!TTF_Init()) {
-    throw core::Error("Failed to initialize sdl ttf: {}", SDL_GetError());
-  }
-  SDL_Window *window = SDL_CreateWindow(_appname.c_str(), 1024, 768,
-                                        SDL_WINDOW_HIGH_PIXEL_DENSITY);
+#if RENDER_MODE == 1
+  _system = std::make_unique<System_SDL>();
+#else
+  _system = std::make_unique<System_Terminal>();
+#endif
   _isRunning = true;
   while (_isRunning) {
-    SDL_Event event;
-    if (SDL_PollEvent(&event)) {
-      if (event.type == SDL_EVENT_QUIT) {
-        _isRunning = false;
+    auto event = _system->recvEvent();
+    if (event) {
+      if (event->type == QuitEvent::type) {
+        exit();
       }
     }
   }
-  SDL_DestroyWindow(window);
-  TTF_Quit();
-  SDL_Quit();
+  _system.reset();
   return _exitCode;
 }
 
@@ -200,6 +160,7 @@ auto Application::getLogger() -> core::Logger & { return *_logger; }
 auto Application::getArguments() const -> const std::vector<std::string> & {
   return _arguments;
 }
+auto Application::getSystem() -> System & { return *_system; }
 
 auto main(int argc, char **argv) -> int {
 #ifdef _WIN32
