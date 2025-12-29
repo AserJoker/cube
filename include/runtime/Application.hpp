@@ -7,7 +7,6 @@
 #include "runtime/Asset.hpp"
 #include "runtime/Config.hpp"
 #include "runtime/ModLoader.hpp"
-#include <SDL3/SDL.h>
 #include <memory>
 #include <string>
 #include <vector>
@@ -25,7 +24,8 @@ private:
   std::unique_ptr<Locale> _locale = std::make_unique<Locale>();
   std::unique_ptr<Asset> _asset = std::make_unique<Asset>();
   std::unique_ptr<Config> _config = std::make_unique<Config>();
-  std::unique_ptr<core::Logger> _logger = std::make_unique<core::Logger>();
+  std::unique_ptr<core::Logger> _logger =
+      std::make_unique<core::Logger>("./logs/" + _appname + ".log");
   std::unique_ptr<ModLoader> _modLoader = std::make_unique<ModLoader>();
   std::unique_ptr<System> _system = nullptr;
   std::vector<std::string> _arguments;

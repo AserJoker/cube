@@ -1,5 +1,6 @@
 #pragma once
 #include "core/Object.hpp"
+#include <cstddef>
 namespace cube::core {
 class Buffer : public Object {
 private:

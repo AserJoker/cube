@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 namespace cube::runtime {
 struct Event {
   size_t type;

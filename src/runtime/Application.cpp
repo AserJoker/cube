@@ -4,11 +4,7 @@
 #include "core/Version.hpp"
 #include "runtime/Event.hpp"
 #include "runtime/System.hpp"
-#if RENDER_MODE == 1
-#include "runtime/System_SDL.hpp"
-#else
 #include "runtime/System_Terminal.hpp"
-#endif
 #include <exception>
 #include <filesystem>
 #include <memory>
@@ -128,11 +124,7 @@ auto Application::run(int argc, char **argv) -> int {
   _modLoader->scanModList();
   prepareLocale();
   resolveConfig();
-#if RENDER_MODE == 1
-  _system = std::make_unique<System_SDL>();
-#else
   _system = std::make_unique<System_Terminal>();
-#endif
   _isRunning = true;
   while (_isRunning) {
     auto event = _system->recvEvent();

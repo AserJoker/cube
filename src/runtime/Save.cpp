@@ -5,6 +5,7 @@
 #include "core/Value.hpp"
 #include "core/Version.hpp"
 #include "runtime/Application.hpp"
+#include <cstring>
 #include <cjson/cJSON.h>
 #include <memory>
 #include <optional>

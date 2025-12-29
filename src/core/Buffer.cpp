@@ -1,7 +1,6 @@
 #include "core/Buffer.hpp"
 #include <cstdint>
 #include <cstring>
-#include <vcruntime_new.h>
 using namespace cube;
 using namespace cube::core;
 Buffer::Buffer(size_t size, const void *data) : _size(size) {

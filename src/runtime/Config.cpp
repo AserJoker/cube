@@ -2,6 +2,7 @@
 #include "core/Json.hpp"
 #include "core/Value.hpp"
 #include "runtime/Application.hpp"
+#include <cstring>
 #include <cjson/cJSON.h>
 #include <memory>
 #include <string>
@@ -38,7 +39,7 @@ auto Config::save(const std::string &domain, const std::string &filename) const
   auto node = core::Value::serializeJSON(value);
   char *content = cJSON_Print(node);
   cJSON_Delete(node);
-  auto buffer = std::make_shared<core::Buffer>(std::strlen(content), content);
+  auto buffer = std::make_shared<core::Buffer>(strlen(content), content);
   free(content);
   return asset.save(fullname, buffer);
 }

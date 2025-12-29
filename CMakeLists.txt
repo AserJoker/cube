@@ -5,9 +5,7 @@ project(underground)
 find_package(cJSON CONFIG REQUIRED)
 find_package(qjs CONFIG REQUIRED)
 
-option(ENABLE_GRAPHIC "Use Graphic Render" ON)
-
-message(${ENABLE_GRAPHIC})
+option(ENABLE_GRAPHIC "Use Graphic Render" OFF)
 
 if(ENABLE_GRAPHIC)
     find_package(SDL3 CONFIG REQUIRED)
@@ -30,5 +28,5 @@ add_executable(${PROJECT_NAME} ${SOURCE_CORE} ${SOURCE_RUNTIME})
 if(ENABLE_GRAPHIC)
     target_link_libraries(${PROJECT_NAME} PRIVATE cjson qjs SDL3::SDL3 SDL3_ttf::SDL3_ttf)
 else()
-    target_link_libraries(${PROJECT_NAME} PRIVATE cjson qjs)
+    target_link_libraries(${PROJECT_NAME} PRIVATE cjson qjs stdc++exp)
 endif()
