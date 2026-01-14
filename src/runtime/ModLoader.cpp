@@ -1,246 +1,218 @@
 #include "runtime/ModLoader.hpp"
-#include "core/Error.hpp"
-#include "core/Json.hpp"
 #include "core/Value.hpp"
-#include "core/Version.hpp"
 #include "runtime/Application.hpp"
-#include <algorithm>
+#include "runtime/Logger.hpp"
+#include "runtime/Mod.hpp"
 #include <filesystem>
-#include <optional>
+#include <format>
 #include <sstream>
+#include <stdexcept>
+#include <vector>
 using namespace cube;
 using namespace cube::runtime;
-ModLoader::ModLoader() {}
-ModLoader::~ModLoader() {}
-auto ModLoader::scanModList() -> void {
+
+void ModLoader::load(Mod &mod, std::vector<std::string> &path) {
+  auto &manifest = mod.getManifest();
   auto &app = Application::getInstance();
+  auto &logger = app.getLogger("ModLoader");
   auto &asset = app.getAsset();
-  auto moddir = app.getName() + ":mods/";
-  auto path = asset.resolvePath(moddir);
-  auto &logger = app.getLogger();
-  if (!std::filesystem::exists(path)) {
-    std::filesystem::create_directories(path);
-  }
-  if (!std::filesystem::is_directory(path)) {
-    logger.error("Mod directory {} is not a directory", moddir);
-    return;
-  }
-  for (const auto &entry : std::filesystem::directory_iterator(path)) {
-    if (entry.is_directory()) {
-      auto modName = entry.path().filename().string();
-      auto manifestPath = moddir + modName + "/manifest.json";
-      auto json = asset.loadAs<core::Json>(manifestPath);
-      if (!json) {
-        continue;
-      }
-      auto manifestObj = json->value;
-      if (manifestObj.getType() != core::Value::Type::Object) {
-        logger.error("Invalid mod manifest {} : invalid format, manifest "
-                     "must be object",
-                     manifestPath);
-        continue;
-      }
-      Manifest manifest;
-      auto manifestMap = manifestObj.asObject();
-      if (!manifestMap->contains("name") ||
-          manifestMap->at("name").getType() != core::Value::Type::String) {
-        logger.error("Invalid mod manifest {} : invalid format, field "
-                     "'name' is required",
-                     manifestPath);
-        continue;
-      }
-      manifest.name = manifestMap->at("name").asString().value();
-      if (!manifestMap->contains("version") ||
-          manifestMap->at("version").getType() != core::Value::Type::String) {
-        logger.error("Invalid mod manifest {} : invalid format, field "
-                     "'version' is required",
-                     manifestPath);
-        continue;
-      }
-      std::string version = manifestMap->at("version").asString().value();
-      auto parsedVersion = core::Version::parse(version);
-      if (!parsedVersion) {
-        logger.error("Invalid mod manifest {} : invalid format, "
-                     "version '{}' is invalid",
-                     manifestPath, version);
-        continue;
-      }
-      manifest.version = parsedVersion.value();
-      if (!manifestMap->contains("gameVersion") ||
-          manifestMap->at("version").getType() != core::Value::Type::String) {
-        logger.error("Invalid mod manifest {} : invalid format, field "
-                     "'gameVersion' is required",
-                     manifestPath);
-        continue;
-      }
-      std::string gameVersion =
-          manifestMap->at("gameVersion").asString().value();
-      auto parsedGameVersion = core::Version::parse(gameVersion);
-      if (!parsedGameVersion) {
-        logger.error("Invalid mod manifest {} : invalid format, "
-                     "version '{}' is invalid",
-                     manifestPath, gameVersion);
-        continue;
-      }
-      manifest.gameVersion = parsedGameVersion.value();
-      if (manifestMap->contains("locales")) {
-        auto localesVal = manifestMap->at("locales").asObject();
-        if (localesVal) {
-          for (const auto &[key, val] : localesVal.value()) {
-            auto localeStr = val.asString();
-            if (localeStr) {
-              manifest.locales[key] = localeStr.value();
-            } else {
-              logger.error("Invalid mod manifest {} : invalid format, "
-                           "field 'locales' must be string map",
-                           manifestPath);
-              continue;
-            }
-          }
-        }
-      }
-      if (manifestMap->contains("languages")) {
-        auto languagesVal = manifestMap->at("languages").asObject();
-        if (languagesVal) {
-          for (const auto &[key, val] : languagesVal.value()) {
-            auto languageStr = val.asString();
-            if (languageStr) {
-              manifest.languages[key] = languageStr.value();
-            } else {
-              logger.error("Invalid mod manifest {} : invalid format, "
-                           "field 'languages' must be string map",
-                           manifestPath);
-              continue;
-            }
-          }
-        }
-      }
-      if (manifestMap->contains("dependencies")) {
-        auto dependenciesVal = manifestMap->at("dependencies").asObject();
-        if (dependenciesVal) {
-          for (const auto &[name, version] : dependenciesVal.value()) {
-            auto versionStr = version.asString();
-            if (versionStr) {
-              manifest.dependencies[name] = versionStr.value();
-            } else {
-              logger.error("Invalid mod manifest {} : invalid format, "
-                           "field 'dependencies' must be string map",
-                           manifestPath);
-              continue;
-            }
-          }
-        }
-      }
-      if (manifestMap->contains("script")) {
-        auto scriptVal = manifestMap->at("script").asString();
-        if (scriptVal) {
-          manifest.script = scriptVal.value();
-        }
-      }
-      manifest.path = asset.resolvePath(moddir + modName + "/");
-      if (_mods.contains(manifest.name)) {
-        throw core::Error("Duplicate mod found : {}", manifest.name);
-      }
-      _mods[manifest.name] = manifest;
-    }
-  }
-}
-auto ModLoader::loadAllMods() -> void {
-  std::vector<std::string> dependences;
-  for (const auto &[modName, manifest] : _mods) {
-    if (manifest.isEnable) {
-      loadMod(modName, dependences);
-    }
-  }
-}
-auto ModLoader::loadMod(const std::string &modName,
-                        std::vector<std::string> &dependences) -> void {
-  auto &app = Application::getInstance();
   auto &locale = app.getLocale();
-  auto &asset = app.getAsset();
-  if (std::find(dependences.begin(), dependences.end(), modName) !=
-      dependences.end()) {
-    std::stringstream ss;
-    ss << "cycle dependence found: ";
-    for (auto &dep : dependences) {
-      ss << dep << "->";
+  auto &script = app.getScript();
+  if (app.getAppVersion() < manifest.engine) {
+    mod.setError(
+        std::format("require {} version: {}, application version is too low",
+                    app.getAppName(), manifest.engine.toString()));
+    logger.error("Failed to load mod '{}': {}", manifest.name, mod.getMesage());
+    return;
+  }
+  for (auto &[name, version] : manifest.dependences) {
+    if (!_mods.contains(name)) {
+      mod.setError(
+          std::format("dependence {}@{} is missing", name, version.toString()));
+      logger.error("Failed to load mod '{}': {}", manifest.name,
+                   mod.getMesage());
+      return;
     }
-    ss << modName;
-    throw core::Error("{}", ss.str());
+    auto &dep = _mods.at(name);
+    if (dep.getManifest().version < version) {
+      mod.setError(std::format(
+          "dependence {}@{} version is too low, require {}", name,
+          dep.getManifest().version.toString(), version.toString()));
+      logger.error("Failed to load mod '{}': {}", manifest.name,
+                   mod.getMesage());
+      return;
+    }
+    if (std::find(path.begin(), path.end(), name) != path.end()) {
+      std::stringstream ss;
+      ss << "cycle dependence found: ";
+      for (auto &part : path) {
+        ss << part << " -> ";
+      }
+      ss << name;
+      mod.setError(ss.str());
+      logger.error("Failed to load mod '{}': {}", manifest.name,
+                   mod.getMesage());
+      return;
+    }
+    if (mod.getState() == Mod::State::ENABLE) {
+      path.push_back(name);
+      load(mod, path);
+      path.pop_back();
+      if (dep.getState() == Mod::State::ERROR) {
+        mod.setError(std::format(
+            "Failed to load mod {}@{}, dependence mod '{}' load failed",
+            manifest.name, manifest.version.toString(), name));
+        return;
+      }
+    }
   }
-  auto &mod = _mods.at(modName);
-  if (!mod.isEnable) {
-    return;
-  }
-  if (mod.isLoaded) {
-    return;
-  }
-  dependences.push_back(modName);
-  for (auto &[name, _] : mod.dependencies) {
-    loadMod(name, dependences);
-  }
-  dependences.pop_back();
-  asset.addDomain(mod.name, mod.path);
-  for (auto &[lang, name] : mod.languages) {
-    locale.addLanguage(lang, name);
-  }
-  for (auto &[lang, source] : mod.locales) {
-    locale.addLanguageSource(lang, mod.name + ":" + source);
-  }
-  mod.isLoaded = true;
-}
 
-auto ModLoader::getManifest(const std::string &modName)
-    -> std::optional<Manifest> {
-  if (_mods.contains(modName)) {
-    return _mods.at(modName);
+  for (auto &[name, version] : manifest.optionalDependences) {
+    auto &dep = _mods.at(name);
+    if (dep.getManifest().version < version) {
+      mod.setError(std::format(
+          "dependence {}@{} version is too low, require {}", name,
+          dep.getManifest().version.toString(), version.toString()));
+      logger.error("Failed to load mod '{}': {}", manifest.name,
+                   mod.getMesage());
+      return;
+    }
+    if (std::find(path.begin(), path.end(), name) != path.end()) {
+      std::stringstream ss;
+      ss << "cycle dependence found: ";
+      for (auto &part : path) {
+        ss << part << " -> ";
+      }
+      ss << name;
+      mod.setError(ss.str());
+      logger.error("Failed to load mod '{}': {}", manifest.name,
+                   mod.getMesage());
+      return;
+    }
+    if (dep.getState() == Mod::State::ENABLE) {
+      path.push_back(name);
+      load(dep, path);
+      path.pop_back();
+      if (dep.getState() == Mod::State::ERROR) {
+        mod.setError(std::format(
+            "Failed to load mod {}@{}, dependence mod '{}' load failed",
+            manifest.name, manifest.version.toString(), name));
+        return;
+      }
+    }
   }
-  return std::nullopt;
+  asset.setDomain(mod.getManifest().name, mod.getDomain());
+  for (auto &[code, name] : manifest.languages) {
+    locale.addLanguage(code, name);
+  }
+  if (manifest.preload.contains("locale")) {
+    auto &modlocale = manifest.preload.at("locale");
+    for (auto &[lang, src] : modlocale) {
+      locale.addLanguageSource(lang, src);
+    }
+  }
+  std::string scriptPath = asset.resolve(manifest.name, "script/index.js");
+  if (std::filesystem::exists(scriptPath) &&
+      !std::filesystem::is_directory(scriptPath)) {
+    auto buf = asset.load(manifest.name, "script/index.js");
+    script.run(std::string{(const char *)buf->getData(), buf->getSize()},
+               scriptPath);
+  }
+  mod.ready();
 }
-
-auto ModLoader::getModList() -> std::vector<std::string> {
-  std::vector<std::string> modList;
-  for (const auto &[modName, manifest] : _mods) {
-    modList.push_back(modName);
-  }
-  return modList;
-}
-auto ModLoader::enableMod(const std::string &modName) -> void {
-  if (!_mods.contains(modName)) {
-    throw core::Error("unknown mod '{}'", modName);
-  }
+auto ModLoader::reset() -> void { _mods.clear(); }
+auto ModLoader::scanMods() -> void {
   auto &app = Application::getInstance();
-  auto &mod = _mods.at(modName);
-  if (mod.isEnable) {
-    return;
-  }
-  if (mod.gameVersion > app.getVersion()) {
-    throw core::Error("require game version '{}'", mod.name,
-                      core::Version::serialize(mod.gameVersion));
-  }
-  for (auto &[name, ver] : mod.dependencies) {
-    auto version = core::Version::parse(ver);
-    if (!version) {
-      throw core::Error("unknown dependence '{}@{}'", name, ver);
+  auto &asset = app.getAsset();
+  auto &logger = app.getLogger("ModLoader");
+  auto modpath = asset.resolve(app.getAppName(), "mods");
+  if (std::filesystem::exists(modpath) &&
+      std::filesystem::is_directory(modpath)) {
+    for (auto &item : std::filesystem::directory_iterator(modpath)) {
+      if (!item.is_directory()) {
+        continue;
+      }
+      std::filesystem::path manifestPath = item.path() / "manifest.json";
+      if (!std::filesystem::exists(manifestPath)) {
+        continue;
+      }
+      auto buf = asset.load(app.getAppName(),
+                            "mods" / item.path().filename() / "manifest.json");
+      if (!buf) {
+        continue;
+      }
+      std::string src = {(const char *)buf->getData(), buf->getSize()};
+      auto val = core::Value::fromJSON(src);
+      if (!val) {
+        logger.error("Failed to resolve manifest: {}", manifestPath.string());
+        continue;
+      }
+      Mod::Manifest manifest{*val};
+      if (_mods.contains(manifest.name)) {
+        throw std::runtime_error(
+            std::format("Duplicate mod found: {}@{} and {}@{}", manifest.name,
+                        _mods[manifest.name].getManifest().version.toString(),
+                        manifest.name, manifest.version.toString()));
+      }
+      _mods[manifest.name] = Mod{manifest, item.path()};
     }
-    if (!_mods.contains(name) || version.value() > _mods.at(name).version) {
-      throw core::Error("cannot find dependence '{}@{}' required by '{}'", name,
-                        ver, mod.name);
-    }
-    enableMod(name);
   }
-  mod.isEnable = true;
 }
-auto ModLoader::disableMod(const std::string &modName) -> void {
-  if (!_mods.contains(modName)) {
-    return;
+auto ModLoader::getMod(const std::string &name) const -> const Mod * {
+  if (_mods.contains(name)) {
+    return &_mods.at(name);
   }
-  auto &manifest = _mods.at(modName);
-  if (!manifest.isEnable) {
-    return;
+  return nullptr;
+}
+auto ModLoader::getMod(const std::string &name) -> Mod * {
+  if (_mods.contains(name)) {
+    return &_mods.at(name);
   }
-  for (auto &child : manifest.children) {
-    disableMod(child);
+  return nullptr;
+}
+
+auto ModLoader::getMods() const
+    -> const std::unordered_map<std::string, Mod> & {
+  return _mods;
+}
+
+auto ModLoader::loadEnableMods() -> void {
+  std::vector<std::string> path;
+  for (auto &[_, mod] : _mods) {
+    if (mod.getState() == Mod::State::ENABLE) {
+      path.push_back(mod.getManifest().name);
+      load(mod, path);
+      path.pop_back();
+    }
   }
-  manifest.isEnable = false;
+}
+auto ModLoader::enableMod(const std::string &name) -> void {
+  if (_mods.contains(name)) {
+    auto &mod = _mods.at(name);
+    if (mod.getState() != Mod::State::ENABLE &&
+        mod.getState() != Mod::State::READY) {
+      mod.enable();
+    }
+    auto &manifest = mod.getManifest();
+    for (auto &[dep, _] : manifest.dependences) {
+      enableMod(dep);
+    }
+    for (auto &[dep, _] : manifest.optionalDependences) {
+      enableMod(dep);
+    }
+  }
+}
+auto ModLoader::disableMod(const std::string &name) -> void {
+  if (_mods.contains(name)) {
+    auto &mod = _mods.at(name);
+    if (mod.getState() != Mod::State::DISABLE) {
+      mod.disable();
+    }
+    for (auto &[modname, mod] : _mods) {
+      auto &manifest = mod.getManifest();
+      if (manifest.dependences.contains(name)) {
+        disableMod(modname);
+      }
+    }
+  }
 }

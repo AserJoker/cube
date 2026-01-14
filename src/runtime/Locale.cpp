@@ -1,86 +1,142 @@
 #include "runtime/Locale.hpp"
 #include "runtime/Application.hpp"
-#include <algorithm>
+#include <string>
+#include <unordered_map>
+#include <vector>
 using namespace cube;
 using namespace cube::runtime;
-auto Locale::setLang(const std::string &lang) -> bool {
-  if (!_languages.contains(lang)) {
-    return false;
+
+auto Locale::load(const std::string &id,
+                  std::unordered_map<std::string, std::string> &locales) const
+    -> void {
+  auto &asset = Application::getInstance().getAsset();
+  auto &logger = Application::getInstance().getLogger("Locale");
+  if (!_languages.contains(id)) {
+    logger.error("Unknown language code '{}'", id);
+    return;
   }
-  _language = lang;
-  _locales.clear();
-  auto &app = Application::getInstance();
-  auto &asset = app.getAsset();
-  for (const auto &source : _languages.at(lang)) {
-    auto buffer = asset.load(source);
-    if (!buffer) {
+  for (auto &source : getLanguageSource(id)) {
+    auto buf = asset.load(source);
+    if (!buf) {
+      logger.warn("Failed to load locale file '{}' for '{}'", source, id);
       continue;
     }
-    std::string content(static_cast<const char *>(buffer->getData()),
-                        buffer->getSize());
-    size_t pos = 0;
-    while (pos < content.size()) {
-      size_t endLine = content.find('\n', pos);
-      if (endLine == std::string::npos) {
-        endLine = content.size();
+    std::string src{(const char *)buf->getData(), buf->getSize()};
+    size_t idx = 0;
+    while (!src.empty()) {
+      idx = src.find_first_of('\n');
+      std::string line;
+      if (idx != std::string::npos) {
+        line = src.substr(0, idx);
+        src = src.substr(idx + 1);
+      } else {
+        line = src;
+        src.clear();
       }
-      std::string line = content.substr(pos, endLine - pos);
-      size_t commentPos = line.find('#');
-      if (commentPos != std::string::npos) {
-        line = line.substr(0, commentPos);
+      idx = line.find_first_of('#');
+      if (idx != std::string::npos) {
+        line = line.substr(0, idx);
       }
-      size_t sepPos = line.find('=');
-      if (sepPos != std::string::npos) {
-        std::string key = line.substr(0, sepPos);
-        std::string value = line.substr(sepPos + 1);
-        key.erase(0, key.find_first_not_of(" \t\r"));
-        key.erase(key.find_last_not_of(" \t\r") + 1);
-        value.erase(0, value.find_first_not_of(" \t\r"));
-        value.erase(value.find_last_not_of(" \t\r") + 1);
-        if (value.size() >= 2 && value.front() == '\"' &&
-            value.back() == '\"') {
-          value = value.substr(1, value.size() - 2);
+      std::string key;
+      std::string value;
+      idx = line.find_first_of('=');
+      if (idx != std::string::npos) {
+        key = line.substr(0, idx);
+        value = line.substr(idx + 1);
+
+        idx = key.find_first_not_of(" \t\r\f\v");
+        if (idx != std::string::npos) {
+          key = key.substr(idx);
         }
-        _locales[key] = value;
+        idx = key.find_last_not_of(" \t\r\f\v");
+        if (idx != std::string::npos) {
+          key = key.substr(0, idx + 1);
+        }
+
+        idx = value.find_first_not_of(" \t\r\f\v");
+        if (idx != std::string::npos) {
+          value = value.substr(idx);
+        }
+        idx = value.find_last_not_of(" \t\r\f\v");
+        if (idx != std::string::npos) {
+          value = value.substr(0, idx + 1);
+        }
+        if (value.starts_with('\"')) {
+          value = value.substr(1);
+        }
+        if (value.ends_with('\"')) {
+          value = value.substr(0, value.length() - 1);
+        }
+        locales[key] = value;
       }
-      pos = endLine + 1;
     }
   }
-  return true;
 }
-
-auto Locale::addLanguage(const std::string &lang, const std::string &name)
-    -> void {
-  _languageNames[lang] = name;
+auto Locale::reset() -> void {
+  _locales.clear();
+  _defs.clear();
+  _languages.clear();
+  _language = "";
+  _defaultLanguage = "";
 }
-auto Locale::addLanguageSource(const std::string &lang,
-                               const std::string &source) -> void {
-  auto &sources = _languages[lang];
-  if (std::find(sources.begin(), sources.end(), source) == sources.end()) {
-    sources.push_back(source);
-  }
-}
-
-auto Locale::getLang() const -> const std::string & { return _language; }
-
-auto Locale::i18n(const std::string &key, const std::string &def,
-                  const Parameters &params) const -> std::string {
-  auto it = _locales.find(key);
-  std::string result = (it != _locales.end()) ? it->second : def;
-  if (result.empty()) {
-    result = key;
-  }
-  for (const auto &[paramKey, paramValue] : params) {
-    std::string placeholder = "{" + paramKey + "}";
-    size_t pos = 0;
-    while ((pos = result.find(placeholder, pos)) != std::string::npos) {
-      result.replace(pos, placeholder.length(), paramValue);
-      pos += paramValue.length();
-    }
-  }
-  return result;
+auto Locale::getLanguage() const -> const std::string & { return _language; }
+auto Locale::getDefaultLanguage() const -> const std::string & {
+  return _defaultLanguage;
 }
 auto Locale::getLanguages() const
     -> const std::unordered_map<std::string, std::string> & {
-  return _locales;
+  return _languages;
+}
+auto Locale::getLanguageSource(const std::string &id) const
+    -> const std::vector<std::string> & {
+  static std::vector<std::string> empty = {};
+  if (_sources.contains(id)) {
+    return _sources.at(id);
+  }
+  return empty;
+}
+auto Locale::addLanguageSource(const std::string &id, const std::string &source)
+    -> void {
+  auto &sources = _sources[id];
+  sources.push_back(source);
+}
+auto Locale::addLanguage(const std::string &id, const std::string &name)
+    -> void {
+  _languages[id] = name;
+}
+auto Locale::setDefaultLanguage(const std::string &id) -> void {
+  _defs.clear();
+  load(id, _defs);
+}
+auto Locale::setLanguage(const std::string &id) -> void {
+  _locales.clear();
+  load(id, _locales);
+}
+
+auto Locale::i18n(const std::string &key, const std::string &def) const
+    -> const std::string & {
+  if (_locales.contains(key)) {
+    return _locales.at(key);
+  }
+  if (_defs.contains(key)) {
+    return _defs.at(key);
+  }
+  if (!def.empty()) {
+    return def;
+  }
+  return key;
+}
+auto Locale::i18n(const std::string &key,
+                  const std::unordered_map<std::string, std::string> &params,
+                  const std::string &def) const -> std::string {
+  std::string result = i18n(key, def);
+  for (auto &[field, value] : params) {
+    std::string fmt = "{" + field + "}";
+    size_t idx = result.find_first_of(field);
+    while (idx != std::string::npos) {
+      result = result.replace(idx, field.length(), value);
+      idx = result.find_first_of(field);
+    }
+  }
+  return result;
 }

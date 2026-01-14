@@ -1,158 +1,128 @@
-#include "runtime/Application.hpp"
-#include "core/Logger.hpp"
 #include "core/Value.hpp"
-#include "core/Version.hpp"
+#include "runtime/Asset.hpp"
 #include "runtime/Event.hpp"
-#include "runtime/System.hpp"
-#include "runtime/System_Terminal.hpp"
+#include "runtime/Locale.hpp"
+#include <cjson/cJSON.h>
 #include <exception>
 #include <filesystem>
 #include <memory>
-#include <stdexcept>
-#include <string>
+#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
 #else
-#include <locale.h>
+#include <clocale>
 #endif
-
+#include "runtime/Application.hpp"
 using namespace cube;
 using namespace cube::runtime;
 
-auto Application::setInfo(const std::string &appname,
-                          const std::string &appversion) -> void {
-  this->_appname = appname;
-  auto version = core::Version::parse(appversion);
-  if (!version) {
-    _logger->error(
-        "Failed to set application version '{}', invalid version format",
-        appversion);
-  }
-  this->_version = version.value();
+Application &Application::getInstance() {
+  static Application theApp;
+  return theApp;
 }
 
-auto Application::getName() const -> const std::string & { return _appname; }
+Application::Application() {}
 
-auto Application::getVersion() const -> const core::Version & {
-  return _version;
+Application::~Application() {}
+
+auto Application::reset() -> void {
+  _loggers.clear();
+  _asset.reset();
+  _locale.reset();
+  _configuration.reset();
+  _modLoader.reset();
+  initialize();
 }
 
-auto Application::getInstance() -> Application & {
-  static Application instance;
-  return instance;
+auto Application::initialize() -> void {
+  _asset.setDomain(_appname, std::filesystem::current_path());
+  _locale.addLanguage("en_US", "English (US)");
+  _locale.addLanguageSource("en_US", _appname + ":data/locale/en_US.lang");
+  _locale.setDefaultLanguage("en_US");
+  _locale.setLanguage("en_US");
+
+  auto &config = _configuration.getConfig(getAppName());
+  if (!config.getObject().contains("language")) {
+    config.asObject()->insert({"language", core::Value{}.setString("en_US")});
+  }
+  if (!config.getObject().contains("enableMods")) {
+    config.asObject()->insert({"enableMods", core::Value{}.setArray()});
+  }
+  _configuration.saveConfig(getAppName());
+
+  auto buf = _asset.load(_appname, "script/index.mjs");
+  if (buf) {
+    std::string src{(const char *)buf->getData(), buf->getSize()};
+    _script.run(src, _asset.resolve(_appname, "script/index.mjs"));
+  }
+
+  _modLoader.scanMods();
+  for (auto &mod : config.getField("enableMods").getArray()) {
+    _modLoader.enableMod(mod.getString());
+  }
+  _modLoader.loadEnableMods();
+  _locale.setLanguage(config.getField("language").getString());
 }
 
-auto Application::resolveConfig() -> void {
-  auto cfg = _config->load(_appname, "options.json");
-  if (cfg.getType() != core::Value::Type::Object) {
-    cfg.setObject();
-  }
-
-  auto language = cfg.getField("language");
-  if (!language || language->getType() != core::Value::Type::String) {
-    cfg.setField("language", core::Value::createString("en_US"));
-    _locale->setLang("en_US");
-  } else {
-    if (!_locale->setLang(language->asString().value())) {
-      _locale->setLang("en_US");
-      cfg.setField("language", core::Value::createString("en_US"));
-    }
-  }
-  auto logLevel = cfg.getField("logLevel");
-  if (!logLevel || logLevel->getType() != core::Value::Type::String) {
-    cfg.setField("logLevel", core::Value::createString("info"));
-    _logger->setMask(core::Logger::Level::INFO);
-  } else {
-    auto level = logLevel.value().asString().value();
-    if (level == "debug") {
-      _logger->setMask(core::Logger::Level::DEBUG);
-    } else if (level == "info") {
-      _logger->setMask(core::Logger::Level::INFO);
-    } else if (level == "log") {
-      _logger->setMask(core::Logger::Level::LOG);
-    } else if (level == "warn") {
-      _logger->setMask(core::Logger::Level::WARN);
-    } else if (level == "error") {
-      _logger->setMask(core::Logger::Level::ERR);
-    } else if (level == "panic") {
-      _logger->setMask(core::Logger::Level::PANIC);
-    } else {
-      _logger->setMask(core::Logger::Level::INFO);
-      cfg.setField("logLevel", core::Value::createString("info"));
-    }
-  }
-  auto enableMods = cfg.getField("enableMods");
-  if (!enableMods || enableMods->getType() != core::Value::Type::Array) {
-    cfg.setField("enableMods", core::Value::createArray());
-  } else {
-    auto resolved = core::Value::createArray();
-    auto mods = enableMods->asArray().value();
-    for (auto &mod : mods) {
-      if (mod.getType() == core::Value::Type::String) {
-        auto modstr = mod.asString().value();
-        try {
-          _modLoader->enableMod(modstr);
-          resolved.appendElement(core::Value::createString(modstr));
-        } catch (std::exception &e) {
-          _logger->error("Failed to enable mod '{}': {}", modstr, e.what());
-        }
-      }
-    }
-    cfg.setField("enableMods", resolved);
-  }
-  try {
-    _modLoader->loadAllMods();
-  } catch (std::exception &e) {
-    _logger->error("{}", e.what());
-    cfg.setField("enableMods", core::Value::createArray());
-  }
-  _config->save(_appname, "options.json");
-}
-
-auto Application::prepareLocale() -> void {
-  _locale->addLanguage("en_US", "English (US)");
-  _locale->addLanguageSource("en_US", _appname + ":locale/en_US.lang");
-}
-
-auto Application::run(int argc, char **argv) -> int {
+auto Application::run(int argc, char *argv[]) -> int {
   for (int idx = 0; idx < argc; idx++) {
-    _arguments.push_back(std::string(argv[idx]));
+    _args.push_back(argv[idx]);
   }
-  auto cwd = std::filesystem::path(argv[0]).parent_path().string();
-  _asset->addDomain(_appname, cwd);
-  _modLoader->scanModList();
-  prepareLocale();
-  resolveConfig();
-  _system = std::make_unique<System_Terminal>();
-  _isRunning = true;
-  while (_isRunning) {
-    auto event = _system->recvEvent();
-    if (event) {
-      if (event->type == QuitEvent::type) {
-        exit();
-      }
+  initialize();
+
+  _eventbus.publish<PreInitializeEvent>();
+  _eventbus.publish<InitializeEvent>();
+  _eventbus.publish<PostInitializeEvent>();
+
+  while (true) {
+    if (_taskLoop.hasTask()) {
+      _taskLoop.nextTask();
+      continue;
     }
+    if (_script.hasTask()) {
+      _script.nextTask();
+      continue;
+    }
+    break;
   }
-  _system.reset();
-  return _exitCode;
+  _eventbus.publish<QuitEvent>();
+  return 0;
 }
 
-auto Application::exit(int exitCode) -> void {
-  _isRunning = false;
-  _exitCode = exitCode;
+auto Application::getArgs() const -> const std::vector<const char *> & {
+  return _args;
+}
+auto Application::getAppName() const -> const std::string & { return _appname; }
+
+auto Application::getAppVersion() const -> const core::Version & {
+  return _appversion;
 }
 
-auto Application::getLocale() -> Locale & { return *_locale; }
+auto Application::getTaskLoop() -> TaskLoop & { return _taskLoop; }
 
-auto Application::getAsset() -> Asset & { return *_asset; }
-
-auto Application::getLogger() -> core::Logger & { return *_logger; }
-
-auto Application::getArguments() const -> const std::vector<std::string> & {
-  return _arguments;
+auto Application::getLogger(const std::string &name) -> Logger & {
+  auto &logger = _loggers[name];
+  if (!logger) {
+    logger = std::make_unique<Logger>(name, &_loggerTarget);
+  }
+  return *logger;
 }
-auto Application::getSystem() -> System & { return *_system; }
+
+auto Application::getLoggerTarget() -> LoggerTarget & { return _loggerTarget; }
+
+auto Application::getAsset() -> Asset & { return _asset; }
+
+auto Application::getLocale() -> Locale & { return _locale; }
+
+auto Application::getEventBus() -> EventBus & { return _eventbus; }
+
+auto Application::getModLoader() -> ModLoader & { return _modLoader; }
+
+auto Application::getConfiguration() -> Configuration & {
+  return _configuration;
+}
+auto Application::getScript() -> Script & { return _script; }
 
 auto main(int argc, char **argv) -> int {
 #ifdef _WIN32
@@ -160,10 +130,13 @@ auto main(int argc, char **argv) -> int {
 #else
   setlocale(LC_ALL, "");
 #endif
+  auto &theApp = Application::getInstance();
   try {
-    return Application::getInstance().run(argc, argv);
-  } catch (std::runtime_error &e) {
-    Application::getInstance().getLogger().panic("{}", e.what());
+    return theApp.run(argc, argv);
+  } catch (std::exception &e) {
+    theApp.getLogger("System").error("Uncaugt error: {}", e.what());
+  } catch (...) {
+    theApp.getLogger("System").error("Uncaught Error: unknown error");
   }
   return -1;
 }

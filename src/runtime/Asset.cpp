@@ -1,155 +1,105 @@
 #include "runtime/Asset.hpp"
-#include "runtime/Application.hpp"
-#include <cstdio>
+#include "core/Buffer.hpp"
 #include <filesystem>
+#include <fstream>
+#include <memory>
+#include <mutex>
+#include <shared_mutex>
 #include <string>
-#include <vector>
 using namespace cube;
 using namespace cube::runtime;
-
-auto Asset::addDomain(const std::string &name, const std::string &path)
-    -> bool {
-  std::vector<std::string> parts;
-  std::string part;
-  auto p = std::filesystem::absolute(path);
-  for (auto &ch : p.string()) {
-    if (ch == '/' || ch == '\\') {
-      if (part == ".") {
-        part.clear();
-      } else if (part == "..") {
-        if (!parts.empty()) {
-          parts.pop_back();
-        } else {
-          return false;
-        }
-        part.clear();
-      } else {
-        parts.push_back(part);
-        part.clear();
-      }
-    } else {
-      part += ch;
-    }
-  }
-  if (part == "..") {
-    if (parts.empty()) {
-      return false;
-    } else {
-      parts.pop_back();
-    }
-  } else if (part != "." && !part.empty()) {
-    parts.push_back(part);
-  }
-  std::string resolvedPath;
-  for (size_t i = 0; i < parts.size(); ++i) {
-    if (parts[i].empty() && i != 0) {
-      return false;
-    }
-    resolvedPath += parts[i] + "/";
-  }
-  _domains[name] = resolvedPath;
-  return true;
+auto Asset::setDomain(const std::string &name, const std::string &path)
+    -> void {
+  std::unique_lock<std::shared_mutex> lock(_mutex);
+  _domains[name] = path;
 }
-
-auto Asset::resolvePath(const std::string &fullpath) const -> std::string {
-  auto pos = fullpath.find(":");
-  auto domain = fullpath.substr(0, pos);
-  auto path = fullpath.substr(pos + 1);
-  if (path.starts_with('/')) {
-    return "";
-  }
-  if (!_domains.contains(domain)) {
-    return "";
-  }
-  std::vector<std::string> parts;
-  std::string part;
-  for (auto &ch : path) {
-    if (ch == '/' || ch == '\\') {
-      if (part == ".") {
-        part.clear();
-      } else if (part == "..") {
-        if (!parts.empty()) {
-          parts.pop_back();
-        } else {
-          return "";
-        }
-        part.clear();
-      } else {
-        if (part.empty()) {
-          return "";
-        }
-        parts.push_back(part);
-        part.clear();
-      }
-    } else {
-      part += ch;
-    }
-  }
-  if (part == ".") {
-    return "";
-  } else if (part == "..") {
-    return "";
-  } else if (!part.empty()) {
-    parts.push_back(part);
-    part.clear();
-  }
-  path = _domains.at(domain);
-  for (size_t i = 0; i < parts.size(); ++i) {
-    path += parts[i];
-    if (i != parts.size() - 1) {
-      path += "/";
-    }
-  }
-  return path;
+auto Asset::reset() -> void {
+  std::unique_lock<std::shared_mutex> lock(_mutex);
+  _domains.clear();
 }
-
-auto Asset::load(const std::string &fullpath) const
-    -> std::shared_ptr<core::Buffer> {
-  auto path = resolvePath(fullpath);
-  auto &logger = Application::getInstance().getLogger();
-  if (path.empty()) {
-    logger.error("Failed to resolve asset: '{}'", fullpath);
+auto Asset::getDomain(const std::string &name, const std::string &def) const
+    -> const std::string & {
+  std::shared_lock<std::shared_mutex> lock(_mutex);
+  if (_domains.contains(name)) {
+    return _domains.at(name);
+  }
+  return def;
+}
+auto Asset::resolve(const std::string &domain, const std::string &path) const
+    -> std::string {
+  if (domain.empty()) {
+    return path;
+  }
+  std::filesystem::path dpath = getDomain(domain);
+  dpath.append(path);
+  return dpath.string();
+}
+auto Asset::resolve(const std::string &id) const -> std::string {
+  size_t idx = id.find_first_of(':');
+  if (idx == std::string::npos) {
+    return id;
+  }
+  std::string domain = id.substr(0, idx);
+  std::string path = id.substr(idx + 1);
+  return resolve(domain, path);
+}
+auto Asset::load(const std::string &id) -> std::shared_ptr<core::Buffer> {
+  size_t idx = id.find_first_of(':');
+  if (idx == std::string::npos) {
     return nullptr;
   }
-  return loadFile(path);
+  std::string domain = id.substr(0, idx);
+  std::string path = id.substr(idx + 1);
+  return load(domain, path);
 }
-
-auto Asset::loadFile(const std::string &path) const
+auto Asset::load(const std::string &domain, const std::string &p) const
     -> std::shared_ptr<core::Buffer> {
-  auto &logger = Application::getInstance().getLogger();
-  FILE *file = fopen(path.c_str(), "rb");
-  if (!file) {
-    logger.error("Failed to open file: {}", path);
+  std::string path = resolve(domain, p);
+  if (!std::filesystem::exists(path)) {
     return nullptr;
   }
-  fseek(file, 0, SEEK_END);
-  size_t size = ftell(file);
-  fseek(file, 0, SEEK_SET);
-  auto buffer = std::make_shared<core::Buffer>(size);
-  fread(const_cast<void *>(buffer->getData()), 1, size, file);
-  fclose(file);
-  return buffer;
+  if (std::filesystem::is_directory(path)) {
+    return nullptr;
+  }
+  std::ifstream file;
+  file.open(path, std::ios::binary);
+  if (!file.is_open()) {
+    return nullptr;
+  }
+  size_t len = 0;
+  file.seekg(0, std::ios::end);
+  len = file.tellg();
+  file.seekg(0, std::ios::beg);
+  std::shared_ptr<core::Buffer> buf = std::make_shared<core::Buffer>(len);
+  file.read((char *)buf->getData(), len);
+  return buf;
 }
-auto Asset::save(const std::string &fullpath,
-                 const std::shared_ptr<core::Buffer> &buffer) const -> bool {
-  auto &logger = Application::getInstance().getLogger();
-  auto path = resolvePath(fullpath);
-  if (path.empty()) {
-    logger.error("Failed to resolve asset: '{}'", fullpath);
+auto Asset::save(const std::string &id,
+                 const std::shared_ptr<core::Buffer> &data) const -> bool {
+  size_t idx = id.find_first_of(':');
+  if (idx == std::string::npos) {
     return false;
   }
-  auto parentDir = std::filesystem::path(path).parent_path();
-  if (!std::filesystem::exists(parentDir)) {
-    std::filesystem::create_directories(parentDir);
+  std::string domain = id.substr(0, idx);
+  std::string path = id.substr(idx + 1);
+  return save(domain, path, data);
+}
+auto Asset::save(const std::string &domain, const std::string &p,
+                 const std::shared_ptr<core::Buffer> &data) const -> bool {
+  std::filesystem::path path = resolve(domain, p);
+  if (!std::filesystem::exists(path.parent_path())) {
+    if (!std::filesystem::create_directories(path.parent_path())) {
+      return false;
+    }
   }
-  FILE *fp = fopen(path.c_str(), "w");
-  if (!fp) {
-    logger.error("Invalid asset name: {}", fullpath);
+  if (!std::filesystem::is_directory(path.parent_path())) {
     return false;
   }
-  if (buffer) {
-    fwrite(buffer->getData(), 1, buffer->getSize(), fp);
+  std::ofstream file;
+  file.open(path, std::ios::binary);
+  if (!file.is_open()) {
+    return false;
   }
-  fclose(fp);
+  file.write((const char *)data->getData(), data->getSize());
   return true;
 }

@@ -1,57 +1,62 @@
-#pragma once
-#include "Locale.hpp"
-#include "System.hpp"
-#include "core/Logger.hpp"
-#include "core/Object.hpp"
+#ifndef _H_CUBE_RUNTIME_APPLICATION_
+#define _H_CUBE_RUNTIME_APPLICATION_
+#include "core/Instance.hpp"
 #include "core/Version.hpp"
 #include "runtime/Asset.hpp"
-#include "runtime/Config.hpp"
+#include "runtime/Configuration.hpp"
+#include "runtime/EventBus.hpp"
+#include "runtime/Locale.hpp"
+#include "runtime/Logger.hpp"
+#include "runtime/LoggerTarget.hpp"
 #include "runtime/ModLoader.hpp"
-#include <memory>
+#include "runtime/Script.hpp"
+#include "runtime/TaskLoop.hpp"
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace cube::runtime {
-class Application : public core::Object {
+class Application : public core::Instance {
 private:
+  std::vector<const char *> _args;
   std::string _appname = APP_NAME;
-  core::Version _version =
-      core::Version::parse(APP_VERSION).value_or(core::Version{0, 1, 0});
+  core::Version _appversion = core::Version::parse(APP_VERSION);
 
 private:
-  bool _isRunning = false;
-  int _exitCode = 0;
-  std::unique_ptr<Locale> _locale = std::make_unique<Locale>();
-  std::unique_ptr<Asset> _asset = std::make_unique<Asset>();
-  std::unique_ptr<Config> _config = std::make_unique<Config>();
-  std::unique_ptr<core::Logger> _logger =
-      std::make_unique<core::Logger>("./logs/" + _appname + ".log");
-  std::unique_ptr<ModLoader> _modLoader = std::make_unique<ModLoader>();
-  std::unique_ptr<System> _system = nullptr;
-  std::vector<std::string> _arguments;
+  Asset _asset;
+  Configuration _configuration;
+  EventBus _eventbus;
+  TaskLoop _taskLoop;
+  Locale _locale;
+  ModLoader _modLoader;
+  LoggerTarget _loggerTarget;
+  Script _script;
+
+  std::unordered_map<std::string, std::unique_ptr<Logger>> _loggers;
 
 private:
-  Application() = default;
-  ~Application() override = default;
+  auto reset() -> void;
+  auto initialize() -> void;
 
 public:
-  static auto getInstance() -> Application &;
-
-private:
-  auto resolveConfig() -> void;
-  auto prepareLocale() -> void;
+  static Application &getInstance();
+  Application();
+  ~Application() override;
+  auto run(int argc, char *argv[]) -> int;
+  auto getArgs() const -> const std::vector<const char *> &;
+  auto getAppName() const -> const std::string &;
+  auto getAppVersion() const -> const core::Version &;
 
 public:
-  auto setInfo(const std::string &appname, const std::string &appversion)
-      -> void;
-  auto getName() const -> const std::string &;
-  auto getVersion() const -> const core::Version &;
-  auto run(int argc, char **argv) -> int;
-  auto exit(int exitCode = 0) -> void;
-  auto getLocale() -> Locale &;
+  auto getTaskLoop() -> TaskLoop &;
+  auto getLogger(const std::string &name) -> Logger &;
+  auto getLoggerTarget() -> LoggerTarget &;
   auto getAsset() -> Asset &;
-  auto getLogger() -> core::Logger &;
-  auto getArguments() const -> const std::vector<std::string> &;
-  auto getSystem() -> System &;
+  auto getLocale() -> Locale &;
+  auto getEventBus() -> EventBus &;
+  auto getModLoader() -> ModLoader &;
+  auto getConfiguration() -> Configuration &;
+  auto getScript() -> Script &;
 };
 } // namespace cube::runtime
+#endif

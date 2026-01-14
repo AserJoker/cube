@@ -1,29 +1,35 @@
-#pragma once
+#ifndef _H_CORE_RUNTIME_ASSET_
+#define _H_CORE_RUNTIME_ASSET_
 #include "core/Buffer.hpp"
-#include "core/Object.hpp"
+#include "core/Instance.hpp"
+#include <filesystem>
 #include <memory>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
+
 namespace cube::runtime {
-class Asset : public core::Object {
+class Asset : public core::Instance {
 private:
   std::unordered_map<std::string, std::string> _domains;
+  mutable std::shared_mutex _mutex;
 
 public:
-  auto resolvePath(const std::string &path) const -> std::string;
-  auto addDomain(const std::string &name, const std::string &path) -> bool;
-  auto load(const std::string &fullpath) const -> std::shared_ptr<core::Buffer>;
-  auto loadFile(const std::string &path) const -> std::shared_ptr<core::Buffer>;
-  template <class T>
-  auto loadAs(const std::string &fullpath) const -> std::shared_ptr<T> {
-    auto path = resolvePath(fullpath);
-    auto buffer = loadFile(path);
-    if (!buffer) {
-      return nullptr;
-    }
-    return std::make_shared<T>(buffer, resolvePath(path));
-  }
-  auto save(const std::string &fullpath,
-            const std::shared_ptr<core::Buffer> &buffer) const -> bool;
+  auto reset() -> void;
+  auto setDomain(const std::string &name, const std::string &path) -> void;
+  auto getDomain(const std::string &name,
+                 const std::string &def = std::filesystem::current_path()) const
+      -> const std::string &;
+  auto resolve(const std::string &domain, const std::string &path) const
+      -> std::string;
+  auto resolve(const std::string &id) const -> std::string;
+  auto load(const std::string &id) -> std::shared_ptr<core::Buffer>;
+  auto load(const std::string &domain, const std::string &path) const
+      -> std::shared_ptr<core::Buffer>;
+  auto save(const std::string &id,
+            const std::shared_ptr<core::Buffer> &data) const -> bool;
+  auto save(const std::string &domain, const std::string &path,
+            const std::shared_ptr<core::Buffer> &data) const -> bool;
 };
 } // namespace cube::runtime
+#endif

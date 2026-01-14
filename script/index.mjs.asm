@@ -1,0 +1,36 @@
+[section .metadata]
+.filename: /home/aserjoker/cube/script/index.mjs
+.dirname: /home/aserjoker/cube/script
+[section .constants]
+.0: "add"
+.1: "./add.mjs"
+.2: "console"
+.3: "log"
+[section .data]
+0: NEO_ASM_PUSH_SCOPE
+2: NEO_ASM_PUSH_UNINITIALIZED
+4: NEO_ASM_SET_CONST
+6: NEO_ASM_DEF "add"
+16: NEO_ASM_POP
+18: NEO_ASM_IMPORT "./add.mjs"
+28: NEO_ASM_PUSH_VALUE 1
+34: NEO_ASM_PUSH_STRING "add"
+44: NEO_ASM_GET_FIELD
+46: NEO_ASM_STORE "add"
+56: NEO_ASM_POP
+58: NEO_ASM_LOAD "console"
+68: NEO_ASM_PUSH_STRING "log"
+78: NEO_ASM_PUSH_ARRAY
+80: NEO_ASM_LOAD "add"
+90: NEO_ASM_PUSH_ARRAY
+92: NEO_ASM_PUSH_NUMBER 1
+102: NEO_ASM_APPEND
+104: NEO_ASM_PUSH_NUMBER 2
+114: NEO_ASM_APPEND
+116: NEO_ASM_CALL 2,16
+126: NEO_ASM_APPEND
+128: NEO_ASM_MEMBER_CALL 2,12
+138: NEO_ASM_SAVE
+140: NEO_ASM_POP
+142: NEO_ASM_HLT
+144: NEO_ASM_POP_SCOPE

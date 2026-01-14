@@ -1,42 +1,26 @@
-#pragma once
-#include "core/Object.hpp"
-#include "core/Version.hpp"
-#include <optional>
-#include <string>
-#include <unordered_map>
+#ifndef _H_CUBE_RUNTIME_MOD_LOADER_
+#define _H_CUBE_RUNTIME_MOD_LOADER_
+#include "Mod.hpp"
+#include "core/Instance.hpp"
 #include <vector>
 
 namespace cube::runtime {
-class ModLoader : public core::Object {
+class ModLoader : public core::Instance {
 private:
-  struct Manifest {
-    std::string path;
-    std::string name;
-    core::Version version;
-    core::Version gameVersion;
-    std::unordered_map<std::string, std::string> locales;
-    std::unordered_map<std::string, std::string> languages;
-    std::unordered_map<std::string, std::string> dependencies;
-    std::vector<std::string> children;
-    std::string script;
-    bool isEnable = false;
-    bool isLoaded = false;
-  };
-
-  std::unordered_map<std::string, Manifest> _mods;
+  std::unordered_map<std::string, Mod> _mods;
 
 private:
-  auto loadMod(const std::string &modName,
-               std::vector<std::string> &dependences) -> void;
+  void load(Mod &manifest, std::vector<std::string> &path);
 
 public:
-  ModLoader();
-  ~ModLoader() override;
-  auto scanModList() -> void;
-  auto loadAllMods() -> void;
-  auto getManifest(const std::string &modName) -> std::optional<Manifest>;
-  auto getModList() -> std::vector<std::string>;
-  auto enableMod(const std::string &modName) -> void;
-  auto disableMod(const std::string &modName) -> void;
+  auto reset() -> void;
+  auto scanMods() -> void;
+  auto getMod(const std::string &name) const -> const Mod *;
+  auto getMod(const std::string &name) -> Mod *;
+  auto getMods() const -> const std::unordered_map<std::string, Mod> &;
+  auto loadEnableMods() -> void;
+  auto enableMod(const std::string &name) -> void;
+  auto disableMod(const std::string &name) -> void;
 };
 } // namespace cube::runtime
+#endif
