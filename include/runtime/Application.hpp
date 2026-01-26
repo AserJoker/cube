@@ -11,6 +11,8 @@
 #include "runtime/ModLoader.hpp"
 #include "runtime/Script.hpp"
 #include "runtime/TaskLoop.hpp"
+#include "video/Device.hpp"
+#include <SDL3/SDL.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -31,12 +33,15 @@ private:
   ModLoader _modLoader;
   LoggerTarget _loggerTarget;
   Script _script;
+  SDL_Window *_window = nullptr;
+  std::unique_ptr<video::Device> _video = nullptr;
 
   std::unordered_map<std::string, std::unique_ptr<Logger>> _loggers;
 
 private:
   auto reset() -> void;
   auto initialize() -> void;
+  auto dispose() -> void;
 
 public:
   static Application &getInstance();
@@ -57,6 +62,7 @@ public:
   auto getModLoader() -> ModLoader &;
   auto getConfiguration() -> Configuration &;
   auto getScript() -> Script &;
+  auto getVideo() -> video::Device &;
 };
 } // namespace cube::runtime
 #endif

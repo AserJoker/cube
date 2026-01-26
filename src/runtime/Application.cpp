@@ -2,10 +2,15 @@
 #include "runtime/Asset.hpp"
 #include "runtime/Event.hpp"
 #include "runtime/Locale.hpp"
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_init.h>
+#include <SDL3/SDL_log.h>
+#include <SDL3/SDL_video.h>
 #include <cjson/cJSON.h>
 #include <exception>
 #include <filesystem>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 
 #ifdef _WIN32
@@ -22,9 +27,89 @@ Application &Application::getInstance() {
   return theApp;
 }
 
-Application::Application() {}
+Application::Application() {
+  SDL_SetLogOutputFunction(
+      [](void *userdata, int category, SDL_LogPriority priority,
+         const char *message) {
+        Application *app = (Application *)userdata;
+        std::string cate = "Custom";
+        switch (category) {
+        case SDL_LOG_CATEGORY_APPLICATION:
+          cate = "Application";
+          break;
+        case SDL_LOG_CATEGORY_ERROR:
+          cate = "Error";
+          break;
+        case SDL_LOG_CATEGORY_ASSERT:
+          cate = "Assert";
+          break;
+        case SDL_LOG_CATEGORY_SYSTEM:
+          cate = "System";
+          break;
+        case SDL_LOG_CATEGORY_AUDIO:
+          cate = "Audio";
+          break;
+        case SDL_LOG_CATEGORY_VIDEO:
+          cate = "Video";
+          break;
+        case SDL_LOG_CATEGORY_RENDER:
+          cate = "Render";
+          break;
+        case SDL_LOG_CATEGORY_INPUT:
+          cate = "Input";
+          break;
+        case SDL_LOG_CATEGORY_TEST:
+          cate = "Test";
+          break;
+        case SDL_LOG_CATEGORY_GPU:
+          cate = "GPU";
+          break;
+        }
+        auto &logger = app->getLogger("SDL:" + cate);
+        switch (priority) {
+        case SDL_LOG_PRIORITY_INVALID:
+        case SDL_LOG_PRIORITY_TRACE:
+          logger.error("{}", message);
+          break;
+        case SDL_LOG_PRIORITY_VERBOSE:
+        case SDL_LOG_PRIORITY_DEBUG:
+          logger.debug("{}", message);
+          break;
+        case SDL_LOG_PRIORITY_INFO:
+          logger.info("{}", message);
+          break;
+        case SDL_LOG_PRIORITY_WARN:
+          logger.warn("{}", message);
+          break;
+        case SDL_LOG_PRIORITY_ERROR:
+        case SDL_LOG_PRIORITY_CRITICAL:
+          logger.error("{}", message);
+          break;
+        case SDL_LOG_PRIORITY_COUNT:
+          logger.debug("{}", message);
+          break;
+        }
+      },
+      this);
+  SDL_SetLogPriorities(SDL_LOG_PRIORITY_DEBUG);
+  SDL_SetAppMetadata(_appname.c_str(), _appversion.toString().c_str(), nullptr);
+  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
+    throw std::runtime_error(std::string("Failed to initialize SDL: ") +
+                             SDL_GetError());
+  }
+  _taskLoop.emit([](Task &task) {
+    SDL_Event event;
+    if (SDL_PollEvent(&event)) {
+      if (event.type == SDL_EVENT_QUIT) {
+        task.cancel();
+      }
+    }
+    task.setKeep(true);
+  });
+  _video = std::make_unique<video::Device>(_window);
+}
 
-Application::~Application() {}
+Application::~Application() { dispose(); }
 
 auto Application::reset() -> void {
   _loggers.clear();
@@ -49,20 +134,50 @@ auto Application::initialize() -> void {
   if (!config.getObject().contains("enableMods")) {
     config.asObject()->insert({"enableMods", core::Value{}.setArray()});
   }
+  if (!config.getObject().contains("logger")) {
+    config.asObject()->insert({"logger", core::Value{}.setString("info")});
+  }
   _configuration.saveConfig(getAppName());
-
+  _locale.setLanguage(config.getField("language").getString());
+  auto &logger = config.getField("logger").getString();
+  if (logger == "debug") {
+    Logger::setMask(Logger::Level::DEBUG);
+  } else if (logger == "info") {
+    Logger::setMask(Logger::Level::INFO);
+  } else if (logger == "log") {
+    Logger::setMask(Logger::Level::LOG);
+  } else if (logger == "warn") {
+    Logger::setMask(Logger::Level::WARN);
+  } else if (logger == "error") {
+    Logger::setMask(Logger::Level::ERROR);
+  } else {
+    getLogger("System").warn("Unknown logger mask '{}', use info as default",
+                             logger);
+    Logger::setMask(Logger::Level::LOG);
+  }
+  _window = SDL_CreateWindow(_appname.c_str(), 1024, 768, 0);
+  if (!_window) {
+    throw std::runtime_error(std::string("Failed to create window: ") +
+                             SDL_GetError());
+  }
   auto buf = _asset.load(_appname, "script/index.mjs");
   if (buf) {
     std::string src{(const char *)buf->getData(), buf->getSize()};
     _script.run(src, _asset.resolve(_appname, "script/index.mjs"));
   }
-
   _modLoader.scanMods();
   for (auto &mod : config.getField("enableMods").getArray()) {
     _modLoader.enableMod(mod.getString());
   }
   _modLoader.loadEnableMods();
-  _locale.setLanguage(config.getField("language").getString());
+}
+
+auto Application::dispose() -> void {
+  _video.reset();
+  SDL_DestroyWindow(_window);
+  _window = nullptr;
+  SDL_Quit();
+  SDL_SetLogOutputFunction(nullptr, nullptr);
 }
 
 auto Application::run(int argc, char *argv[]) -> int {
@@ -123,6 +238,8 @@ auto Application::getConfiguration() -> Configuration & {
   return _configuration;
 }
 auto Application::getScript() -> Script & { return _script; }
+
+auto Application::getVideo() -> video::Device & { return *_video; }
 
 auto main(int argc, char **argv) -> int {
 #ifdef _WIN32

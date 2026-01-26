@@ -17,8 +17,8 @@ public:
 private:
   std::string _name;
   std::ostream _output;
-  Level _mask = Level::INFO;
   std::mutex _mutex;
+  static Level _mask;
 
 public:
   auto write(const Level &level, const std::string &message) -> void;
@@ -48,10 +48,11 @@ public:
     write(Level::ERROR, std::format(fmt, std::forward<Args>(args)...));
   }
 
-  auto setMask(const Level &level) -> void;
-
 public:
   Logger(const std::string &name, std::streambuf *rdbuf);
+
+public:
+  static auto setMask(const Level &mask) -> void;
 };
 } // namespace cube::runtime
 #endif

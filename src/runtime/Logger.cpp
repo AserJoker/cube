@@ -1,4 +1,6 @@
 #include "runtime/Logger.hpp"
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_log.h>
 #include <chrono>
 #include <iostream>
 #include <mutex>
@@ -10,9 +12,30 @@
 using namespace cube;
 using namespace cube::runtime;
 
+Logger::Level Logger::_mask = Logger::Level::INFO;
+
 Logger::Logger(const std::string &name, std::streambuf *rdbuf)
     : _name(name), _output(rdbuf) {}
-auto Logger::setMask(const Level &mask) -> void { _mask = mask; }
+auto Logger::setMask(const Level &mask) -> void {
+  _mask = mask;
+  switch (mask) {
+  case Level::DEBUG:
+    SDL_SetLogPriorities(SDL_LOG_PRIORITY_DEBUG);
+    break;
+  case Level::INFO:
+    SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
+    break;
+  case Level::LOG:
+    SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
+    break;
+  case Level::WARN:
+    SDL_SetLogPriorities(SDL_LOG_PRIORITY_WARN);
+    break;
+  case Level::ERROR:
+    SDL_SetLogPriorities(SDL_LOG_PRIORITY_ERROR);
+    break;
+  }
+}
 auto Logger::write(const Level &level, const std::string &message) -> void {
   if (level < _mask) {
     return;
