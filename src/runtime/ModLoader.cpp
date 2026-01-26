@@ -58,7 +58,7 @@ void ModLoader::load(Mod &mod, std::vector<std::string> &path) {
       path.push_back(name);
       load(mod, path);
       path.pop_back();
-      if (dep.getState() == Mod::State::ERROR) {
+      if (dep.getState() == Mod::State::ERR) {
         mod.setError(std::format(
             "Failed to load mod {}@{}, dependence mod '{}' load failed",
             manifest.name, manifest.version.toString(), name));
@@ -93,7 +93,7 @@ void ModLoader::load(Mod &mod, std::vector<std::string> &path) {
       path.push_back(name);
       load(dep, path);
       path.pop_back();
-      if (dep.getState() == Mod::State::ERROR) {
+      if (dep.getState() == Mod::State::ERR) {
         mod.setError(std::format(
             "Failed to load mod {}@{}, dependence mod '{}' load failed",
             manifest.name, manifest.version.toString(), name));
@@ -137,7 +137,7 @@ auto ModLoader::scanMods() -> void {
         continue;
       }
       auto buf = asset.load(app.getAppName(),
-                            "mods" / item.path().filename() / "manifest.json");
+                            ("mods" / item.path().filename() / "manifest.json").string());
       if (!buf) {
         continue;
       }
@@ -154,7 +154,7 @@ auto ModLoader::scanMods() -> void {
                         _mods[manifest.name].getManifest().version.toString(),
                         manifest.name, manifest.version.toString()));
       }
-      _mods[manifest.name] = Mod{manifest, item.path()};
+      _mods[manifest.name] = Mod{manifest, item.path().string()};
     }
   }
 }

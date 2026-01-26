@@ -1,6 +1,7 @@
 #include "runtime/Mod.hpp"
 #include "core/Value.hpp"
 #include "core/Version.hpp"
+#include <unordered_map>
 using namespace cube;
 using namespace cube::runtime;
 Mod::Manifest::Manifest() {}
@@ -13,22 +14,23 @@ Mod::Manifest::Manifest(const core::Value &value) {
   this->engine = core::Version::parse(value.getField("engine").getString());
   this->description = value.getField("description").getString();
   this->icon = value.getField("icon").getString();
-  auto &dependences = value.getField("dependences").getObject();
+  auto dependences = value.getField("dependences").getObject();
   for (auto &[key, value] : dependences) {
     this->dependences[key] = core::Version::parse(value.getString());
   }
-  auto &optionalDependences = value.getField("optionalDependences").getObject();
+  auto optionalDependences =
+      value.getField("optionalDependences").getObject();
   for (auto &[key, value] : optionalDependences) {
     this->optionalDependences[key] = core::Version::parse(value.getString());
   }
-  auto &languages = value.getField("languages").getObject();
+  auto languages = value.getField("languages").getObject();
   for (auto &[key, value] : languages) {
     this->languages[key] = value.getString();
   }
-  auto &preload = value.getField("preload").getObject();
+  auto preload = value.getField("preload").getObject();
   for (auto &[type, resources] : preload) {
     auto &res = this->preload[type];
-    auto &items = resources.getObject();
+    auto items = resources.getObject();
     for (auto &[name, item] : items) {
       res[name] = item.getString();
     }
@@ -40,7 +42,7 @@ auto Mod::getManifest() const -> const Mod::Manifest & { return _manifest; }
 auto Mod::getDomain() const -> const std::string & { return _domain; }
 auto Mod::setError(const std::string &message) -> void {
   _message = message;
-  _state = State::ERROR;
+  _state = State::ERR;
 }
 auto Mod::getState() const -> const State & { return _state; }
 auto Mod::getMesage() const -> const std::string & { return _message; };

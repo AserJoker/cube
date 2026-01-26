@@ -23,7 +23,7 @@ public:
     Manifest();
     Manifest(const core::Value &value);
   };
-  enum class State { ENABLE, DISABLE, ERROR, READY };
+  enum class State { ENABLE, DISABLE, ERR, READY };
 
 private:
   State _state = State::DISABLE;

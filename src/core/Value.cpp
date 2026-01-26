@@ -76,13 +76,13 @@ auto Value::asObject() -> std::unordered_map<std::string, Value> * {
   return std::any_cast<std::unordered_map<std::string, Value>>(&_value);
 }
 
-auto Value::getNumber(const double &val) const -> const double & {
+auto Value::getNumber(double val) const -> double {
   if (_type == Type::NUMBER) {
     return std::any_cast<const double &>(_value);
   }
   return val;
 }
-auto Value::getString(const std::string &val) const -> const std::string & {
+auto Value::getString(const std::string &val) const -> std::string {
   if (_type == Type::STRING) {
     return std::any_cast<const std::string &>(_value);
   }
@@ -95,14 +95,14 @@ auto Value::getBoolean(bool val) const -> bool {
   return val;
 }
 auto Value::getArray(const std::vector<Value> &val) const
-    -> const std::vector<Value> & {
+    -> std::vector<Value> {
   if (_type == Type::ARRAY) {
     return std::any_cast<const std::vector<Value> &>(_value);
   }
   return val;
 }
 auto Value::getObject(const std::unordered_map<std::string, Value> &val) const
-    -> const std::unordered_map<std::string, Value> & {
+    -> std::unordered_map<std::string, Value> {
   if (_type == Type::OBJECT) {
     return std::any_cast<const std::unordered_map<std::string, Value> &>(
         _value);
@@ -111,18 +111,18 @@ auto Value::getObject(const std::unordered_map<std::string, Value> &val) const
 }
 
 auto Value::getField(const std::string &key, const Value &val) const
-    -> const Value & {
+    -> const Value {
   if (_type == Type::OBJECT) {
-    auto &obj = getObject();
+    auto obj = getObject();
     if (obj.contains(key)) {
       return obj.at(key);
     }
   }
   return val;
 }
-auto Value::getIndex(size_t idx, const Value &val) const -> const Value & {
+auto Value::getIndex(size_t idx, const Value &val) const -> const Value {
   if (_type == Type::ARRAY) {
-    auto &arr = getArray();
+    auto arr = getArray();
     if (arr.size() > idx) {
       return arr.at(idx);
     }
@@ -131,7 +131,7 @@ auto Value::getIndex(size_t idx, const Value &val) const -> const Value & {
 }
 auto Value::getLength() const -> size_t {
   if (_type == Type::ARRAY) {
-    auto &arr = getArray();
+    auto arr = getArray();
     return arr.size();
   }
   return 0;

@@ -18,7 +18,7 @@ public:
   auto reset() -> void;
   auto setDomain(const std::string &name, const std::string &path) -> void;
   auto getDomain(const std::string &name,
-                 const std::string &def = std::filesystem::current_path()) const
+                 const std::string &def = std::filesystem::current_path().string()) const
       -> const std::string &;
   auto resolve(const std::string &domain, const std::string &path) const
       -> std::string;

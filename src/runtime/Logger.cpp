@@ -31,7 +31,7 @@ auto Logger::setMask(const Level &mask) -> void {
   case Level::WARN:
     SDL_SetLogPriorities(SDL_LOG_PRIORITY_WARN);
     break;
-  case Level::ERROR:
+  case Level::ERR:
     SDL_SetLogPriorities(SDL_LOG_PRIORITY_ERROR);
     break;
   }
@@ -58,7 +58,7 @@ auto Logger::write(const Level &level, const std::string &message) -> void {
   case Level::WARN:
     ss << "[WARN]";
     break;
-  case Level::ERROR:
+  case Level::ERR:
     ss << "[ERROR]";
     break;
   }

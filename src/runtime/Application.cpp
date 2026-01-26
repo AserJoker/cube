@@ -106,7 +106,6 @@ Application::Application() {
     }
     task.setKeep(true);
   });
-  _video = std::make_unique<video::Device>(_window);
 }
 
 Application::~Application() { dispose(); }
@@ -121,7 +120,7 @@ auto Application::reset() -> void {
 }
 
 auto Application::initialize() -> void {
-  _asset.setDomain(_appname, std::filesystem::current_path());
+  _asset.setDomain(_appname, std::filesystem::current_path().string());
   _locale.addLanguage("en_US", "English (US)");
   _locale.addLanguageSource("en_US", _appname + ":data/locale/en_US.lang");
   _locale.setDefaultLanguage("en_US");
@@ -139,7 +138,7 @@ auto Application::initialize() -> void {
   }
   _configuration.saveConfig(getAppName());
   _locale.setLanguage(config.getField("language").getString());
-  auto &logger = config.getField("logger").getString();
+  auto logger = config.getField("logger").getString();
   if (logger == "debug") {
     Logger::setMask(Logger::Level::DEBUG);
   } else if (logger == "info") {
@@ -149,16 +148,11 @@ auto Application::initialize() -> void {
   } else if (logger == "warn") {
     Logger::setMask(Logger::Level::WARN);
   } else if (logger == "error") {
-    Logger::setMask(Logger::Level::ERROR);
+    Logger::setMask(Logger::Level::ERR);
   } else {
     getLogger("System").warn("Unknown logger mask '{}', use info as default",
                              logger);
     Logger::setMask(Logger::Level::LOG);
-  }
-  _window = SDL_CreateWindow(_appname.c_str(), 1024, 768, 0);
-  if (!_window) {
-    throw std::runtime_error(std::string("Failed to create window: ") +
-                             SDL_GetError());
   }
   auto buf = _asset.load(_appname, "script/index.mjs");
   if (buf) {
@@ -184,8 +178,13 @@ auto Application::run(int argc, char *argv[]) -> int {
   for (int idx = 0; idx < argc; idx++) {
     _args.push_back(argv[idx]);
   }
+  _window = SDL_CreateWindow(_appname.c_str(), 1024, 768, 0);
+  if (!_window) {
+    throw std::runtime_error(std::string("Failed to create window: ") +
+                             SDL_GetError());
+  }
+  _video = std::make_unique<video::Device>(_window);
   initialize();
-
   _eventbus.publish<PreInitializeEvent>();
   _eventbus.publish<InitializeEvent>();
   _eventbus.publish<PostInitializeEvent>();

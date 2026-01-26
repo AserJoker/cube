@@ -45,17 +45,16 @@ public:
   auto asArray() -> std::vector<Value> *;
   auto asObject() -> std::unordered_map<std::string, Value> *;
 
-  auto getNumber(const double &val = {}) const -> const double &;
-  auto getString(const std::string &value = {}) const -> const std::string &;
+  auto getNumber(double val = {}) const -> double;
+  auto getString(const std::string &value = {}) const -> std::string;
   auto getBoolean(bool val = false) const -> bool;
-  auto getArray(const std::vector<Value> &val = {}) const
-      -> const std::vector<Value> &;
+  auto getArray(const std::vector<Value> &val = {}) const -> std::vector<Value>;
   auto getObject(const std::unordered_map<std::string, Value> &val = {}) const
-      -> const std::unordered_map<std::string, Value> &;
+      -> std::unordered_map<std::string, Value>;
 
   auto getField(const std::string &key, const Value &val = {}) const
-      -> const Value &;
-  auto getIndex(size_t idx, const Value &val = {}) const -> const Value &;
+      -> const Value;
+  auto getIndex(size_t idx, const Value &val = {}) const -> const Value;
   auto getLength() const -> size_t;
 
   std::string toJSON() const;

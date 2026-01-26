@@ -12,7 +12,7 @@ namespace cube::runtime {
 class Logger : public core::Instance {
 
 public:
-  enum class Level { DEBUG, INFO, LOG, WARN, ERROR };
+  enum class Level { DEBUG, INFO, LOG, WARN, ERR };
 
 private:
   std::string _name;
@@ -45,7 +45,7 @@ public:
 
   template <class... Args>
   auto error(std::format_string<Args...> fmt, Args &&...args) -> void {
-    write(Level::ERROR, std::format(fmt, std::forward<Args>(args)...));
+    write(Level::ERR, std::format(fmt, std::forward<Args>(args)...));
   }
 
 public:
