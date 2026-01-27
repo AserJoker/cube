@@ -27,86 +27,7 @@ Application &Application::getInstance() {
   return theApp;
 }
 
-Application::Application() {
-  SDL_SetLogOutputFunction(
-      [](void *userdata, int category, SDL_LogPriority priority,
-         const char *message) {
-        Application *app = (Application *)userdata;
-        std::string cate = "Custom";
-        switch (category) {
-        case SDL_LOG_CATEGORY_APPLICATION:
-          cate = "Application";
-          break;
-        case SDL_LOG_CATEGORY_ERROR:
-          cate = "Error";
-          break;
-        case SDL_LOG_CATEGORY_ASSERT:
-          cate = "Assert";
-          break;
-        case SDL_LOG_CATEGORY_SYSTEM:
-          cate = "System";
-          break;
-        case SDL_LOG_CATEGORY_AUDIO:
-          cate = "Audio";
-          break;
-        case SDL_LOG_CATEGORY_VIDEO:
-          cate = "Video";
-          break;
-        case SDL_LOG_CATEGORY_RENDER:
-          cate = "Render";
-          break;
-        case SDL_LOG_CATEGORY_INPUT:
-          cate = "Input";
-          break;
-        case SDL_LOG_CATEGORY_TEST:
-          cate = "Test";
-          break;
-        case SDL_LOG_CATEGORY_GPU:
-          cate = "GPU";
-          break;
-        }
-        auto &logger = app->getLogger("SDL:" + cate);
-        switch (priority) {
-        case SDL_LOG_PRIORITY_INVALID:
-        case SDL_LOG_PRIORITY_TRACE:
-          logger.error("{}", message);
-          break;
-        case SDL_LOG_PRIORITY_VERBOSE:
-        case SDL_LOG_PRIORITY_DEBUG:
-          logger.debug("{}", message);
-          break;
-        case SDL_LOG_PRIORITY_INFO:
-          logger.info("{}", message);
-          break;
-        case SDL_LOG_PRIORITY_WARN:
-          logger.warn("{}", message);
-          break;
-        case SDL_LOG_PRIORITY_ERROR:
-        case SDL_LOG_PRIORITY_CRITICAL:
-          logger.error("{}", message);
-          break;
-        case SDL_LOG_PRIORITY_COUNT:
-          logger.debug("{}", message);
-          break;
-        }
-      },
-      this);
-  SDL_SetLogPriorities(SDL_LOG_PRIORITY_DEBUG);
-  SDL_SetAppMetadata(_appname.c_str(), _appversion.toString().c_str(), nullptr);
-  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
-    throw std::runtime_error(std::string("Failed to initialize SDL: ") +
-                             SDL_GetError());
-  }
-  _taskLoop.emit([](Task &task) {
-    SDL_Event event;
-    if (SDL_PollEvent(&event)) {
-      if (event.type == SDL_EVENT_QUIT) {
-        task.cancel();
-      }
-    }
-    task.setKeep(true);
-  });
-}
+Application::Application() {}
 
 Application::~Application() { dispose(); }
 
@@ -174,10 +95,88 @@ auto Application::dispose() -> void {
   SDL_SetLogOutputFunction(nullptr, nullptr);
 }
 
+static void SDL_Logger_Callback(void *userdata, int category,
+                                SDL_LogPriority priority, const char *message) {
+  std::string cate = "Custom";
+  switch (category) {
+  case SDL_LOG_CATEGORY_APPLICATION:
+    cate = "Application";
+    break;
+  case SDL_LOG_CATEGORY_ERROR:
+    cate = "Error";
+    break;
+  case SDL_LOG_CATEGORY_ASSERT:
+    cate = "Assert";
+    break;
+  case SDL_LOG_CATEGORY_SYSTEM:
+    cate = "System";
+    break;
+  case SDL_LOG_CATEGORY_AUDIO:
+    cate = "Audio";
+    break;
+  case SDL_LOG_CATEGORY_VIDEO:
+    cate = "Video";
+    break;
+  case SDL_LOG_CATEGORY_RENDER:
+    cate = "Render";
+    break;
+  case SDL_LOG_CATEGORY_INPUT:
+    cate = "Input";
+    break;
+  case SDL_LOG_CATEGORY_TEST:
+    cate = "Test";
+    break;
+  case SDL_LOG_CATEGORY_GPU:
+    cate = "GPU";
+    break;
+  }
+  auto &logger = Application::getInstance().getLogger("SDL:" + cate);
+  switch (priority) {
+  case SDL_LOG_PRIORITY_INVALID:
+  case SDL_LOG_PRIORITY_TRACE:
+    logger.error("{}", message);
+    break;
+  case SDL_LOG_PRIORITY_VERBOSE:
+  case SDL_LOG_PRIORITY_DEBUG:
+    logger.debug("{}", message);
+    break;
+  case SDL_LOG_PRIORITY_INFO:
+    logger.info("{}", message);
+    break;
+  case SDL_LOG_PRIORITY_WARN:
+    logger.warn("{}", message);
+    break;
+  case SDL_LOG_PRIORITY_ERROR:
+  case SDL_LOG_PRIORITY_CRITICAL:
+    logger.error("{}", message);
+    break;
+  case SDL_LOG_PRIORITY_COUNT:
+    logger.debug("{}", message);
+    break;
+  }
+}
+
 auto Application::run(int argc, char *argv[]) -> int {
   for (int idx = 0; idx < argc; idx++) {
     _args.push_back(argv[idx]);
   }
+  SDL_SetLogOutputFunction(SDL_Logger_Callback, nullptr);
+  SDL_SetLogPriorities(SDL_LOG_PRIORITY_DEBUG);
+  SDL_SetAppMetadata(_appname.c_str(), _appversion.toString().c_str(), nullptr);
+  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
+    throw std::runtime_error(std::string("Failed to initialize SDL: ") +
+                             SDL_GetError());
+  }
+  _taskLoop.emit([](Task &task) {
+    SDL_Event event;
+    if (SDL_PollEvent(&event)) {
+      if (event.type == SDL_EVENT_QUIT) {
+        task.cancel();
+      }
+    }
+    task.setKeep(true);
+  });
+
   _window = SDL_CreateWindow(_appname.c_str(), 1024, 768, 0);
   if (!_window) {
     throw std::runtime_error(std::string("Failed to create window: ") +
@@ -190,12 +189,13 @@ auto Application::run(int argc, char *argv[]) -> int {
   _eventbus.publish<PostInitializeEvent>();
 
   while (true) {
-    if (_taskLoop.hasTask()) {
-      _taskLoop.nextTask();
-      continue;
-    }
-    if (_script.hasTask()) {
-      _script.nextTask();
+    if (_taskLoop.hasTask() || _script.hasTask()) {
+      if (_taskLoop.hasTask()) {
+        _taskLoop.nextTask();
+      }
+      if (_script.hasTask()) {
+        _script.nextTask();
+      }
       continue;
     }
     break;
