@@ -1,6 +1,6 @@
 [section .metadata]
-.filename: /home/aserjoker/cube/script/index.mjs
-.dirname: /home/aserjoker/cube/script
+.filename: D:\project\cube\script/index.mjs
+.dirname: D:\project\cube\script
 [section .constants]
 .0: "add"
 .1: "./add.mjs"

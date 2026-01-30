@@ -3,68 +3,109 @@
 #include <SDL3/SDL_log.h>
 #include <chrono>
 #include <iostream>
-#include <mutex>
 #include <ostream>
-#include <sstream>
-#include <streambuf>
 #include <string>
+#include <unordered_map>
 
 using namespace cube;
 using namespace cube::runtime;
 
-Logger::Level Logger::_mask = Logger::Level::INFO;
+static std::unordered_map<std::string, int> categorys = {
+    {"SDL:APPLICATION", SDL_LOG_CATEGORY_APPLICATION},
+    {"SDL:ERROR", SDL_LOG_CATEGORY_ERROR},
+    {"SDL:ASSERT", SDL_LOG_CATEGORY_ASSERT},
+    {"SDL:SYSTEM", SDL_LOG_CATEGORY_SYSTEM},
+    {"SDL:AUDIO", SDL_LOG_CATEGORY_AUDIO},
+    {"SDL:VIDEO", SDL_LOG_CATEGORY_VIDEO},
+    {"SDL:RENDER", SDL_LOG_CATEGORY_RENDER},
+    {"SDL:INPUT", SDL_LOG_CATEGORY_INPUT},
+    {"SDL:TEST", SDL_LOG_CATEGORY_TEST},
+    {"SDL:GPU", SDL_LOG_CATEGORY_GPU},
+};
 
-Logger::Logger(const std::string &name, std::streambuf *rdbuf)
-    : _name(name), _output(rdbuf) {}
+Logger::Logger(const std::string &name) {
+  if (!categorys.contains(name)) {
+    categorys[name] = categorys.size();
+  }
+  _category = categorys.at(name);
+}
+
 auto Logger::setMask(const Level &mask) -> void {
-  _mask = mask;
   switch (mask) {
   case Level::DEBUG:
-    SDL_SetLogPriorities(SDL_LOG_PRIORITY_DEBUG);
+    SDL_SetLogPriority(_category, SDL_LOG_PRIORITY_DEBUG);
     break;
   case Level::INFO:
-    SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
-    break;
-  case Level::LOG:
-    SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
+    SDL_SetLogPriority(_category, SDL_LOG_PRIORITY_INFO);
     break;
   case Level::WARN:
-    SDL_SetLogPriorities(SDL_LOG_PRIORITY_WARN);
+    SDL_SetLogPriority(_category, SDL_LOG_PRIORITY_WARN);
     break;
   case Level::ERR:
-    SDL_SetLogPriorities(SDL_LOG_PRIORITY_ERROR);
+    SDL_SetLogPriority(_category, SDL_LOG_PRIORITY_ERROR);
     break;
   }
 }
+
 auto Logger::write(const Level &level, const std::string &message) -> void {
-  if (level < _mask) {
-    return;
+  SDL_LogPriority priority = SDL_LOG_PRIORITY_INFO;
+  switch (level) {
+  case Level::DEBUG:
+    priority = SDL_LOG_PRIORITY_DEBUG;
+    break;
+  case Level::INFO:
+    priority = SDL_LOG_PRIORITY_INFO;
+    break;
+  case Level::WARN:
+    priority = SDL_LOG_PRIORITY_WARN;
+    break;
+  case Level::ERR:
+    priority = SDL_LOG_PRIORITY_ERROR;
+    break;
   }
-  std::stringstream ss;
+  SDL_LogMessage(_category, priority, "%s", message.c_str());
+}
+void Logger::SDL_LogCallback(void *stream, int category,
+                             SDL_LogPriority priority, const char *message) {
+  std::ostream &out = *(std::ostream *)stream;
   auto now = std::chrono::system_clock::now();
   auto zone = std::chrono::current_zone();
   auto zoned_time = std::chrono::zoned_time(zone, now);
-  ss << std::format("{:%Y-%m-%d %H:%M:%OS} ", zoned_time);
-  switch (level) {
-  case Level::DEBUG:
-    ss << "[DEBUG]";
+  out << std::format("{:%Y-%m-%d %H:%M:%OS} ", zoned_time);
+  switch (priority) {
+  case SDL_LOG_PRIORITY_INVALID:
+    out << "[INVALID] ";
     break;
-  case Level::INFO:
-    ss << "[INFO]";
+  case SDL_LOG_PRIORITY_TRACE:
+    out << "[TRACE] ";
     break;
-  case Level::LOG:
-    ss << "[LOG]";
+  case SDL_LOG_PRIORITY_VERBOSE:
+    out << "[VERBOSE] ";
     break;
-  case Level::WARN:
-    ss << "[WARN]";
+  case SDL_LOG_PRIORITY_DEBUG:
+    out << "[DEBUG] ";
     break;
-  case Level::ERR:
-    ss << "[ERROR]";
+  case SDL_LOG_PRIORITY_INFO:
+    out << "[INFO] ";
+    break;
+  case SDL_LOG_PRIORITY_WARN:
+    out << "[WARN] ";
+    break;
+  case SDL_LOG_PRIORITY_ERROR:
+    out << "[ERROR] ";
+    break;
+  case SDL_LOG_PRIORITY_CRITICAL:
+    out << "[CRITICAL] ";
+    break;
+  case SDL_LOG_PRIORITY_COUNT:
+    out << "[COUNT] ";
     break;
   }
-  ss << " [" << _name << "] :" << message;
-  {
-    std::lock_guard<std::mutex> lock(_mutex);
-    _output << ss.str() << std::endl;
+  for (auto &[name, cat] : categorys) {
+    if (cat == category) {
+      out << "[" + name << "] :";
+    }
   }
+  out << message;
+  out << std::endl;
 }

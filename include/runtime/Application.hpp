@@ -7,12 +7,11 @@
 #include "runtime/EventBus.hpp"
 #include "runtime/Locale.hpp"
 #include "runtime/Logger.hpp"
-#include "runtime/LoggerTarget.hpp"
 #include "runtime/ModLoader.hpp"
 #include "runtime/Script.hpp"
-#include "runtime/TaskLoop.hpp"
 #include "video/Device.hpp"
 #include <SDL3/SDL.h>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -28,15 +27,13 @@ private:
   Asset _asset;
   Configuration _configuration;
   EventBus _eventbus;
-  TaskLoop _taskLoop;
   Locale _locale;
   ModLoader _modLoader;
-  LoggerTarget _loggerTarget;
   Script _script;
   SDL_Window *_window = nullptr;
   std::unique_ptr<video::Device> _video = nullptr;
-
   std::unordered_map<std::string, std::unique_ptr<Logger>> _loggers;
+  Logger::Level _mask = Logger::Level::INFO;
 
 private:
   auto reset() -> void;
@@ -53,9 +50,6 @@ public:
   auto getAppVersion() const -> const core::Version &;
 
 public:
-  auto getTaskLoop() -> TaskLoop &;
-  auto getLogger(const std::string &name) -> Logger &;
-  auto getLoggerTarget() -> LoggerTarget &;
   auto getAsset() -> Asset &;
   auto getLocale() -> Locale &;
   auto getEventBus() -> EventBus &;
@@ -63,6 +57,7 @@ public:
   auto getConfiguration() -> Configuration &;
   auto getScript() -> Script &;
   auto getVideo() -> video::Device &;
+  auto getLogger(const std::string &name) -> Logger &;
 };
 } // namespace cube::runtime
 #endif
